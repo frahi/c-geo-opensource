@@ -887,4 +887,6 @@
 	<item quantity="one">vor einer Minute</item>
 	<item quantity="other">vor %d Minuten</item>
   </plurals>
+  <string name="cache_photos">Fotos</string>
+  <string name="cache_photos_add">Foto hinzufügen</string>
 </resources>

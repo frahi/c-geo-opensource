@@ -622,6 +622,7 @@ public class CacheDetailActivity extends AbstractActivity {
         if (CollectionUtils.isNotEmpty(cache.getInventory())) {
             pageOrder.add(Page.INVENTORY);
         }
+        pageOrder.add(Page.PHOTOS);
 
         // switch to page 2 (index 1) if we're out of bounds
         if (viewPager.getCurrentItem() < 0 || viewPager.getCurrentItem() >= viewPagerAdapter.getCount()) {
@@ -997,6 +998,10 @@ public class CacheDetailActivity extends AbstractActivity {
                     case INVENTORY:
                         creator = new InventoryViewCreator();
                         break;
+
+                    case PHOTOS:
+                        creator = new PhotosViewCreator();
+                        break;
                 }
                 viewCreators.put(page, creator);
             }
@@ -1066,7 +1071,8 @@ public class CacheDetailActivity extends AbstractActivity {
         LOGS(R.string.cache_logs),
         LOGSFRIENDS(R.string.cache_logsfriends),
         WAYPOINTS(R.string.cache_waypoints),
-        INVENTORY(R.string.cache_inventory);
+        INVENTORY(R.string.cache_inventory),
+        PHOTOS(R.string.cache_photos);
 
         final private int titleStringId;
 
@@ -2511,6 +2517,36 @@ public class CacheDetailActivity extends AbstractActivity {
             });
 
             return view;
+        }
+    }
+
+    // added by frahi
+    private class PhotosViewCreator implements PageViewCreator {
+        /**
+         * Returns a validated view.
+         *
+         * @return
+         */
+        public View getDispatchedView()
+        {
+            view = (ScrollView) getLayoutInflater().inflate(R.layout.cacheview_photos, null);
+            return view;
+        }
+
+        protected ScrollView view;
+
+        @Override
+        public View getView() {
+            if (view == null) {
+                view = (ScrollView) getDispatchedView();
+            }
+
+            return view;
+        }
+
+        @Override
+        public void notifyDataSetChanged() {
+            view = null;
         }
     }
 }

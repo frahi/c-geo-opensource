@@ -1094,4 +1094,6 @@
     · new: Clear history\n
     · fix: A lot of bugs\n
     \n</string>
+  <string name="cache_photos_add">Add Photo</string>
+  <string name="cache_photos">Photos</string>
 </resources>
