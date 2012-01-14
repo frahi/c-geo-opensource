@@ -12,6 +12,7 @@ import cgeo.geocaching.enumerations.WaypointType;
 import cgeo.geocaching.geopoint.Geopoint;
 import cgeo.geocaching.geopoint.GeopointFormatter;
 import cgeo.geocaching.geopoint.GeopointParser;
+import cgeo.geocaching.offlinenotes.OfflineNote;
 import cgeo.geocaching.utils.CryptUtils;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -1090,5 +1091,41 @@ public class cgCache implements ICache {
 
     public boolean hasAttributes() {
         return attributes != null && attributes.size() > 0;
+    }
+
+    // offline notes
+    protected List<OfflineNote> offlineNotes;
+
+    /**
+     * return an immutable list of all offline notes.
+     *
+     * @return always non <code>null</code>
+     */
+    public List<OfflineNote> getOfflineNotes() {
+        if (offlineNotes == null) {
+            return Collections.emptyList();
+        }
+        return Collections.unmodifiableList(offlineNotes);
+    }
+
+    public void setOfflineNotes(List<OfflineNote> offlineNotes) {
+        this.offlineNotes = offlineNotes;
+    }
+
+    public void addOfflineNote(OfflineNote newNote) {
+        if (offlineNotes == null) {
+            offlineNotes = new ArrayList<OfflineNote>();
+
+            //            // add example images
+            //            OfflineNoteImage offlineImage1 = new OfflineNoteImage(new cgImage("file:///sdcard/DCIM/Camera/1319797478178.jpg", "Example image 1", "This is the first example image"));
+            //            offlineImage1.setDescription("Description1");
+            //            offlineNotes.add(offlineImage1);
+
+            //            OfflineNoteImage offlineImage2 = new OfflineNoteImage(new cgImage("file:///sdcard/DCIM/Camera/1323016828694.jpg", "Example image 2", "This is the second example image"));
+            //            offlineImage2.setDescription("Another description");
+            //            offlineNotes.addOfflineNote(offlineImage2);
+        }
+
+        offlineNotes.add(newNote);
     }
 }

@@ -11,6 +11,8 @@ import cgeo.geocaching.connector.IConnector;
 import cgeo.geocaching.enumerations.LogType;
 import cgeo.geocaching.geopoint.GeopointFormatter;
 import cgeo.geocaching.network.HtmlImage;
+import cgeo.geocaching.offlinenotes.OfflineNote;
+import cgeo.geocaching.offlinenotes.OfflineNoteImage;
 import cgeo.geocaching.utils.BaseUtils;
 import cgeo.geocaching.utils.CancellableHandler;
 import cgeo.geocaching.utils.CryptUtils;
@@ -33,14 +35,17 @@ import android.content.Intent;
 import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Parcelable;
+import android.provider.MediaStore;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v4.view.ViewPager.OnPageChangeListener;
@@ -74,7 +79,12 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.TextView.BufferType;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -1000,7 +1010,7 @@ public class CacheDetailActivity extends AbstractActivity {
                         break;
 
                     case PHOTOS:
-                        creator = new PhotosViewCreator();
+                        creator = new OfflineNotesViewCreator();
                         break;
                 }
                 viewCreators.put(page, creator);
@@ -1299,6 +1309,12 @@ public class CacheDetailActivity extends AbstractActivity {
          * Handles changed data-sets.
          */
         public void notifyDataSetChanged();
+
+        /**
+         * Callback for activity results on the ViewPage.
+         * See Activity::onActivityResult
+         */
+        void onActivityResult(int requestCode, int resultCode, Intent data);
     }
 
     /**
@@ -1514,6 +1530,10 @@ public class CacheDetailActivity extends AbstractActivity {
             }
 
             return view;
+        }
+
+        @Override
+        public void onActivityResult(int requestCode, int resultCode, Intent data) {
         }
 
         private TextView addCacheDetail(final int nameId, final CharSequence value) {
@@ -2024,6 +2044,10 @@ public class CacheDetailActivity extends AbstractActivity {
             return view;
         }
 
+        @Override
+        public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        }
+
         private void loadLongDescription() {
             Button showDesc = (Button) view.findViewById(R.id.show_description);
             showDesc.setVisibility(View.GONE);
@@ -2163,6 +2187,10 @@ public class CacheDetailActivity extends AbstractActivity {
             new LogInflaterTask().execute((Void) null);
 
             return view;
+        }
+
+        @Override
+        public void onActivityResult(int requestCode, int resultCode, Intent data) {
         }
 
         private class LogInflaterTask extends AsyncTask<Void, Void, Void> {
@@ -2452,6 +2480,10 @@ public class CacheDetailActivity extends AbstractActivity {
             return view;
         }
 
+        @Override
+        public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        }
+
         private class AddWaypointClickListener implements View.OnClickListener {
 
             public void onClick(View view) {
@@ -2518,10 +2550,22 @@ public class CacheDetailActivity extends AbstractActivity {
 
             return view;
         }
+
+        @Override
+        public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        }
+
     }
 
     // added by frahi
-    private class PhotosViewCreator implements PageViewCreator {
+    private class OfflineNotesViewCreator implements PageViewCreator {
+        private static final int CAMERA_PIC_REQUEST = 1337;
+
+        public static final int NOTE_TYPE_IMAGE = 1;
+        public static final int NOTE_TYPE_VIDEO = 2;
+        public static final int NOTE_TYPE_TEXT = 3;
+        public static final int NOTE_TYPE_VOICE = 4;
+
         /**
          * Returns a validated view.
          *
@@ -2530,7 +2574,191 @@ public class CacheDetailActivity extends AbstractActivity {
         public View getDispatchedView()
         {
             view = (ScrollView) getLayoutInflater().inflate(R.layout.cacheview_photos, null);
+
+            LinearLayout offlineNotesLayout = (LinearLayout) view.findViewById(R.id.photos);
+
+            List<OfflineNote> notesList = cache.getOfflineNotes();
+
+            {
+                LinearLayout offlineNoteView;
+
+                // sort waypoints: PP, Sx, FI, OWN
+                //List<cgWaypoint> sortedWaypoints = new ArrayList<cgWaypoint>(cache.getWaypoints());
+                //Collections.sort(sortedWaypoints);
+
+                //for (cgWaypoint wpt : sortedWaypoints) {
+                for (OfflineNote note : notesList) {
+                    offlineNoteView = (LinearLayout) getLayoutInflater().inflate(R.layout.offlinenote_item, null);
+
+                    // coordinates
+                    //if (null != wpt.getCoords()) {
+                    //    final TextView coordinatesView = (TextView) waypointView.findViewById(R.id.coordinates);
+                    //    coordinatesView.setText(wpt.getCoords().toString());
+                    //    coordinatesView.setVisibility(View.VISIBLE);
+                    //}
+
+                    // info
+                    final List<String> infoTextList = new ArrayList<String>(3);
+                    if (StringUtils.isNotBlank(note.getDescription())) {
+                        infoTextList.add(note.getDescription());
+                    }
+
+                    infoTextList.add(note.getDescription());
+                    //if (StringUtils.isNotBlank(cgBase.waypointTypes.get(wpt.getWaypointType()))) {
+                    //    infoTextList.add(cgBase.waypointTypes.get(wpt.getWaypointType()));
+                    //}
+                    //if (cgWaypoint.PREFIX_OWN.equalsIgnoreCase(wpt.getPrefix())) {
+                    //    infoTextList.add(res.getString(R.string.waypoint_custom));
+                    //} else {
+                    //    if (StringUtils.isNotBlank(wpt.getPrefix())) {
+                    //        infoTextList.add(wpt.getPrefix());
+                    //    }
+                    //    if (StringUtils.isNotBlank(wpt.getLookup())) {
+                    //        infoTextList.add(wpt.getLookup());
+                    //    }
+                    //}
+                    if (CollectionUtils.isNotEmpty(infoTextList)) {
+                        final TextView infoView = (TextView) offlineNoteView.findViewById(R.id.description);
+                        infoView.setText(StringUtils.join(infoTextList, " · "));
+                        infoView.setVisibility(View.VISIBLE);
+                    }
+
+                    // title
+                    TextView nameView = (TextView) offlineNoteView.findViewById(R.id.date);
+                    String dateString = note.getDate().toString();
+                    if (StringUtils.isNotBlank(dateString)) {
+                        nameView.setText(StringEscapeUtils.unescapeHtml4(dateString));
+                    } else {
+                        nameView.setText(res.getString(R.string.waypoint));
+                    }
+                    //wpt.setIcon(res, nameView);
+
+                    // in case of image
+                    OfflineNoteImage image = (OfflineNoteImage) note;
+                    if (image != null) {
+                        ImageView imageView = (ImageView) offlineNoteView.findViewById(R.id.image);
+
+                        try {
+                            Bitmap bitmap = getThumbnail(Uri.parse(image.getImage().getUrl()), 300);
+                            imageView.setImageBitmap(bitmap);
+                        } catch (Exception e) {
+                            showToast("Could not load image");
+                        }
+
+                        //
+                        //                        Bitmap bitmap = BitmapFactory.decodeFileDescriptor(imageFile);
+                        //
+                        //                        //imageView.setImageURI(Uri.parse(image.getImage().getUrl()));
+                        //                        imageView.setImageURI(Uri.parse(image.getImage().getUrl()));
+                        //                        imageView.setVisibility(View.VISIBLE);
+                    }
+
+                    // note
+                    //if (StringUtils.isNotBlank(image.getDescription()) {
+                    //    final TextView noteView = (TextView) waypointView.findViewById(R.id.note);
+                    //    noteView.setVisibility(View.VISIBLE);
+                    //    if (BaseUtils.containsHtml(wpt.getNote())) {
+                    //        noteView.setText(Html.fromHtml(wpt.getNote().trim()), TextView.BufferType.SPANNABLE);
+                    //    }
+                    //    else {
+                    //        noteView.setText(wpt.getNote().trim());
+                    //    }
+                    //}
+
+                    //registerForContextMenu(waypointView);
+                    //waypointView.setOnClickListener(new WaypointInfoClickListener());
+
+                    offlineNotesLayout.addView(offlineNoteView);
+                }
+            }
+
+            Button addPhoto = (Button) view.findViewById(R.id.add_photo);
+            addPhoto.setClickable(true);
+            addPhoto.setOnClickListener(new AddPhotoClickListener());
+
             return view;
+        }
+
+
+        public Bitmap getThumbnail(Uri uri, int THUMBNAIL_SIZE) throws FileNotFoundException, IOException {
+            InputStream input = getContentResolver().openInputStream(uri);
+
+            BitmapFactory.Options onlyBoundsOptions = new BitmapFactory.Options();
+            onlyBoundsOptions.inJustDecodeBounds = true;
+            onlyBoundsOptions.inDither = true;//optional
+            onlyBoundsOptions.inPreferredConfig = Bitmap.Config.ARGB_8888;//optional
+            BitmapFactory.decodeStream(input, null, onlyBoundsOptions);
+            input.close();
+            if ((onlyBoundsOptions.outWidth == -1) || (onlyBoundsOptions.outHeight == -1))
+                return null;
+
+            int originalSize = (onlyBoundsOptions.outHeight > onlyBoundsOptions.outWidth) ? onlyBoundsOptions.outHeight : onlyBoundsOptions.outWidth;
+
+            double ratio = (originalSize > THUMBNAIL_SIZE) ? (originalSize / THUMBNAIL_SIZE) : 1.0;
+
+            BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
+            bitmapOptions.inSampleSize = getPowerOfTwoForSampleRatio(ratio);
+            bitmapOptions.inDither = true;//optional
+            bitmapOptions.inPreferredConfig = Bitmap.Config.ARGB_8888;//optional
+            input = getContentResolver().openInputStream(uri);
+            Bitmap bitmap = BitmapFactory.decodeStream(input, null, bitmapOptions);
+            input.close();
+            return bitmap;
+        }
+
+        private int getPowerOfTwoForSampleRatio(double ratio) {
+            int k = Integer.highestOneBit((int) Math.floor(ratio));
+            if (k == 0)
+                return 1;
+            else
+                return k;
+        }
+
+        private Uri lastPhotoUri;
+
+        @Override
+        public void onActivityResult(int requestCode, int resultCode, Intent data)
+        {
+            if (requestCode == CAMERA_PIC_REQUEST) {
+                if (resultCode == android.app.Activity.RESULT_OK) {
+                    //                    Uri myUri = null;
+                    //                    try {
+                    //                        myUri = data.getData();
+                    //                    } catch (Exception e) {
+                    //                        showToast("Error in getting the URI");
+                    //                    }
+                    //                    if (myUri == null)
+                    //                        showToast("Image saved. URI is null.");
+                    //                    else
+                    //                        showToast("Image saved to:\n" + myUri.toString());
+
+                    if (lastPhotoUri != null) {
+                        cache.addOfflineNote(new OfflineNoteImage(new cgImage(lastPhotoUri.toString(), "OfflineNoteImage")));
+                        lastPhotoUri = null;
+                    }
+
+                } else {
+                    showToast("Image capture canceled");
+                }
+            }
+        }
+
+        private class AddPhotoClickListener implements View.OnClickListener {
+
+            public void onClick(View view) {
+                // http://developer.android.com/guide/topics/media/camera.html
+                // create Intent to take a picture and return control to the calling application
+                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+
+                Uri fileUri = getNewNoteURI(NOTE_TYPE_IMAGE);
+                intent.putExtra(MediaStore.EXTRA_OUTPUT, fileUri);
+                lastPhotoUri = fileUri;
+
+                // start the image capture Intent
+                startActivityForResult(intent, CAMERA_PIC_REQUEST);
+
+                refreshOnResume = true;
+            }
         }
 
         protected ScrollView view;
@@ -2547,6 +2775,48 @@ public class CacheDetailActivity extends AbstractActivity {
         @Override
         public void notifyDataSetChanged() {
             view = null;
+            System.gc();
+        }
+
+        protected Uri getNewNoteURI(int noteType) {
+
+            File cacheDir = new File(Environment.getExternalStorageDirectory()
+                    + File.separator + "cgeo"
+                    + File.separator + "offline_notes"
+                    + File.separator + cache.getGeocode());
+
+            // Create the storage directory if it does not exist
+            if (!cacheDir.exists()) {
+                if (!cacheDir.mkdirs()) {
+                    Log.d("c:geo", "failed to create directory for offline note saving");
+                    return null;
+                }
+            }
+
+            // Create a media file name
+            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+            File mediaFile = null;
+            if (noteType == NOTE_TYPE_IMAGE)
+                mediaFile = new File(cacheDir.getPath() + File.separator + "IMG_" + timeStamp + ".jpg");
+            else if (noteType == NOTE_TYPE_VIDEO)
+                mediaFile = new File(cacheDir.getPath() + File.separator + "VID_" + timeStamp + ".mp4");
+
+            return Uri.fromFile(mediaFile);
         }
     }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        // propagate the activity result to all PageViewCreators
+        for (Map.Entry<Page, PageViewCreator> entry : viewCreators.entrySet()) {
+            try {
+                entry.getValue().onActivityResult(requestCode, resultCode, data);
+            } catch (Exception e) {
+                showToast("Error during activity result handling");
+            }
+        }
+    }
+
 }

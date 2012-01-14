@@ -887,6 +887,9 @@
 	<item quantity="one">vor einer Minute</item>
 	<item quantity="other">vor %d Minuten</item>
   </plurals>
-  <string name="cache_photos">Fotos</string>
+  <string name="cache_photos">Offline Notizen</string>
   <string name="cache_photos_add">Foto hinzufügen</string>
+  <string name="cache_note_add">Notiz hinzufügen</string>
+  <string name="cache_voice_add">Sprachnotiz hinzufügen</string>
+  <string name="cache_video_add">Video hinzufügen</string>
 </resources>

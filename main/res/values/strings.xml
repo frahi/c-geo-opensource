@@ -1094,6 +1094,9 @@
     · new: Clear history\n
     · fix: A lot of bugs\n
     \n</string>
-  <string name="cache_photos_add">Add Photo</string>
-  <string name="cache_photos">Photos</string>
+  
+  <string name="cache_photos">Offline notes</string><string name="cache_photos_add">Add photo note</string>
+  <string name="cache_note_add">Add note</string>
+  <string name="cache_voice_add">Add voice note</string>
+  <string name="cache_video_add">Add video note</string>
 </resources>
