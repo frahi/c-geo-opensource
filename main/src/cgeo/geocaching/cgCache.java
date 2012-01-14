@@ -1103,7 +1103,7 @@ public class cgCache implements ICache {
      */
     public List<OfflineNote> getOfflineNotes() {
         if (offlineNotes == null) {
-            return Collections.emptyList();
+            offlineNotes = OfflineNote.loadOfflineNotesFromStorage(getGeocode());
         }
         return Collections.unmodifiableList(offlineNotes);
     }
@@ -1114,7 +1114,8 @@ public class cgCache implements ICache {
 
     public void addOfflineNote(OfflineNote newNote) {
         if (offlineNotes == null) {
-            offlineNotes = new ArrayList<OfflineNote>();
+            OfflineNote.loadOfflineNotesFromStorage(getGeocode());
+            //offlineNotes = new ArrayList<OfflineNote>();
 
             //            // add example images
             //            OfflineNoteImage offlineImage1 = new OfflineNoteImage(new cgImage("file:///sdcard/DCIM/Camera/1319797478178.jpg", "Example image 1", "This is the first example image"));

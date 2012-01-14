@@ -12,7 +12,6 @@ import cgeo.geocaching.enumerations.LogType;
 import cgeo.geocaching.geopoint.GeopointFormatter;
 import cgeo.geocaching.network.HtmlImage;
 import cgeo.geocaching.offlinenotes.OfflineNote;
-import cgeo.geocaching.offlinenotes.OfflineNoteImage;
 import cgeo.geocaching.utils.BaseUtils;
 import cgeo.geocaching.utils.CancellableHandler;
 import cgeo.geocaching.utils.CryptUtils;
@@ -41,7 +40,6 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Parcelable;
@@ -79,12 +77,10 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.TextView.BufferType;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLEncoder;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -2561,11 +2557,6 @@ public class CacheDetailActivity extends AbstractActivity {
     private class OfflineNotesViewCreator implements PageViewCreator {
         private static final int CAMERA_PIC_REQUEST = 1337;
 
-        public static final int NOTE_TYPE_IMAGE = 1;
-        public static final int NOTE_TYPE_VIDEO = 2;
-        public static final int NOTE_TYPE_TEXT = 3;
-        public static final int NOTE_TYPE_VOICE = 4;
-
         /**
          * Returns a validated view.
          *
@@ -2634,23 +2625,16 @@ public class CacheDetailActivity extends AbstractActivity {
                     //wpt.setIcon(res, nameView);
 
                     // in case of image
-                    OfflineNoteImage image = (OfflineNoteImage) note;
-                    if (image != null) {
+                    if (note.getType() == OfflineNote.NOTE_TYPE_IMAGE) {
                         ImageView imageView = (ImageView) offlineNoteView.findViewById(R.id.image);
 
                         try {
-                            Bitmap bitmap = getThumbnail(Uri.parse(image.getImage().getUrl()), 300);
+                            Bitmap bitmap = getThumbnail(note.getUri(), 250);
                             imageView.setImageBitmap(bitmap);
+                            imageView.setVisibility(View.VISIBLE);
                         } catch (Exception e) {
                             showToast("Could not load image");
                         }
-
-                        //
-                        //                        Bitmap bitmap = BitmapFactory.decodeFileDescriptor(imageFile);
-                        //
-                        //                        //imageView.setImageURI(Uri.parse(image.getImage().getUrl()));
-                        //                        imageView.setImageURI(Uri.parse(image.getImage().getUrl()));
-                        //                        imageView.setVisibility(View.VISIBLE);
                     }
 
                     // note
@@ -2681,28 +2665,31 @@ public class CacheDetailActivity extends AbstractActivity {
 
 
         public Bitmap getThumbnail(Uri uri, int THUMBNAIL_SIZE) throws FileNotFoundException, IOException {
-            InputStream input = getContentResolver().openInputStream(uri);
+            Bitmap bitmap = null;
+            {
+                InputStream input = getContentResolver().openInputStream(uri);
+                BitmapFactory.Options onlyBoundsOptions = new BitmapFactory.Options();
+                onlyBoundsOptions.inJustDecodeBounds = true;
+                onlyBoundsOptions.inDither = true;//optional
+                onlyBoundsOptions.inPreferredConfig = Bitmap.Config.ARGB_8888;//optional
+                BitmapFactory.decodeStream(input, null, onlyBoundsOptions);
+                input.close();
+                if ((onlyBoundsOptions.outWidth == -1) || (onlyBoundsOptions.outHeight == -1))
+                    return null;
 
-            BitmapFactory.Options onlyBoundsOptions = new BitmapFactory.Options();
-            onlyBoundsOptions.inJustDecodeBounds = true;
-            onlyBoundsOptions.inDither = true;//optional
-            onlyBoundsOptions.inPreferredConfig = Bitmap.Config.ARGB_8888;//optional
-            BitmapFactory.decodeStream(input, null, onlyBoundsOptions);
-            input.close();
-            if ((onlyBoundsOptions.outWidth == -1) || (onlyBoundsOptions.outHeight == -1))
-                return null;
+                int originalSize = (onlyBoundsOptions.outHeight > onlyBoundsOptions.outWidth) ? onlyBoundsOptions.outHeight : onlyBoundsOptions.outWidth;
 
-            int originalSize = (onlyBoundsOptions.outHeight > onlyBoundsOptions.outWidth) ? onlyBoundsOptions.outHeight : onlyBoundsOptions.outWidth;
+                double ratio = (originalSize > THUMBNAIL_SIZE) ? (originalSize / THUMBNAIL_SIZE) : 1.0;
 
-            double ratio = (originalSize > THUMBNAIL_SIZE) ? (originalSize / THUMBNAIL_SIZE) : 1.0;
-
-            BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
-            bitmapOptions.inSampleSize = getPowerOfTwoForSampleRatio(ratio);
-            bitmapOptions.inDither = true;//optional
-            bitmapOptions.inPreferredConfig = Bitmap.Config.ARGB_8888;//optional
-            input = getContentResolver().openInputStream(uri);
-            Bitmap bitmap = BitmapFactory.decodeStream(input, null, bitmapOptions);
-            input.close();
+                BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
+                bitmapOptions.inSampleSize = getPowerOfTwoForSampleRatio(ratio);
+                bitmapOptions.inDither = true;//optional
+                bitmapOptions.inPreferredConfig = Bitmap.Config.ARGB_8888;//optional
+                input = getContentResolver().openInputStream(uri);
+                bitmap = BitmapFactory.decodeStream(input, null, bitmapOptions);
+                input.close();
+            }
+            System.gc();
             return bitmap;
         }
 
@@ -2721,19 +2708,9 @@ public class CacheDetailActivity extends AbstractActivity {
         {
             if (requestCode == CAMERA_PIC_REQUEST) {
                 if (resultCode == android.app.Activity.RESULT_OK) {
-                    //                    Uri myUri = null;
-                    //                    try {
-                    //                        myUri = data.getData();
-                    //                    } catch (Exception e) {
-                    //                        showToast("Error in getting the URI");
-                    //                    }
-                    //                    if (myUri == null)
-                    //                        showToast("Image saved. URI is null.");
-                    //                    else
-                    //                        showToast("Image saved to:\n" + myUri.toString());
 
                     if (lastPhotoUri != null) {
-                        cache.addOfflineNote(new OfflineNoteImage(new cgImage(lastPhotoUri.toString(), "OfflineNoteImage")));
+                        cache.addOfflineNote(new OfflineNote(lastPhotoUri, OfflineNote.NOTE_TYPE_IMAGE));
                         lastPhotoUri = null;
                     }
 
@@ -2750,7 +2727,7 @@ public class CacheDetailActivity extends AbstractActivity {
                 // create Intent to take a picture and return control to the calling application
                 Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 
-                Uri fileUri = getNewNoteURI(NOTE_TYPE_IMAGE);
+                Uri fileUri = OfflineNote.getNewNoteURI(cache.getGeocode(), OfflineNote.NOTE_TYPE_IMAGE);
                 intent.putExtra(MediaStore.EXTRA_OUTPUT, fileUri);
                 lastPhotoUri = fileUri;
 
@@ -2776,32 +2753,6 @@ public class CacheDetailActivity extends AbstractActivity {
         public void notifyDataSetChanged() {
             view = null;
             System.gc();
-        }
-
-        protected Uri getNewNoteURI(int noteType) {
-
-            File cacheDir = new File(Environment.getExternalStorageDirectory()
-                    + File.separator + "cgeo"
-                    + File.separator + "offline_notes"
-                    + File.separator + cache.getGeocode());
-
-            // Create the storage directory if it does not exist
-            if (!cacheDir.exists()) {
-                if (!cacheDir.mkdirs()) {
-                    Log.d("c:geo", "failed to create directory for offline note saving");
-                    return null;
-                }
-            }
-
-            // Create a media file name
-            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-            File mediaFile = null;
-            if (noteType == NOTE_TYPE_IMAGE)
-                mediaFile = new File(cacheDir.getPath() + File.separator + "IMG_" + timeStamp + ".jpg");
-            else if (noteType == NOTE_TYPE_VIDEO)
-                mediaFile = new File(cacheDir.getPath() + File.separator + "VID_" + timeStamp + ".mp4");
-
-            return Uri.fromFile(mediaFile);
         }
     }
 
