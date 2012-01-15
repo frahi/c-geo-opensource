@@ -81,6 +81,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLEncoder;
+import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -2572,14 +2573,9 @@ public class CacheDetailActivity extends AbstractActivity {
 
             {
                 LinearLayout offlineNoteView;
-
-                // sort waypoints: PP, Sx, FI, OWN
-                //List<cgWaypoint> sortedWaypoints = new ArrayList<cgWaypoint>(cache.getWaypoints());
-                //Collections.sort(sortedWaypoints);
-
-                //for (cgWaypoint wpt : sortedWaypoints) {
                 for (OfflineNote note : notesList) {
                     offlineNoteView = (LinearLayout) getLayoutInflater().inflate(R.layout.offlinenote_item, null);
+
 
                     // coordinates
                     //if (null != wpt.getCoords()) {
@@ -2614,13 +2610,13 @@ public class CacheDetailActivity extends AbstractActivity {
                         infoView.setVisibility(View.VISIBLE);
                     }
 
-                    // title
-                    TextView nameView = (TextView) offlineNoteView.findViewById(R.id.date);
-                    String dateString = note.getDate().toString();
+                    // Date
+                    TextView dateView = (TextView) offlineNoteView.findViewById(R.id.date);
+                    String dateString = DateFormat.getDateInstance().format(note.getDate());
                     if (StringUtils.isNotBlank(dateString)) {
-                        nameView.setText(StringEscapeUtils.unescapeHtml4(dateString));
+                        dateView.setText(dateString);
                     } else {
-                        nameView.setText(res.getString(R.string.waypoint));
+                        dateView.setText(res.getString(R.string.waypoint));
                     }
                     //wpt.setIcon(res, nameView);
 
@@ -2629,7 +2625,7 @@ public class CacheDetailActivity extends AbstractActivity {
                         ImageView imageView = (ImageView) offlineNoteView.findViewById(R.id.image);
 
                         try {
-                            Bitmap bitmap = getThumbnail(note.getUri(), 250);
+                            Bitmap bitmap = getThumbnail(note.getUri(), 300);
                             imageView.setImageBitmap(bitmap);
                             imageView.setVisibility(View.VISIBLE);
                         } catch (Exception e) {
@@ -2663,7 +2659,9 @@ public class CacheDetailActivity extends AbstractActivity {
             return view;
         }
 
-
+        /*
+         * Creates a small bitmap out of any Uri
+         */
         public Bitmap getThumbnail(Uri uri, int THUMBNAIL_SIZE) throws FileNotFoundException, IOException {
             Bitmap bitmap = null;
             {
@@ -2689,6 +2687,7 @@ public class CacheDetailActivity extends AbstractActivity {
                 bitmap = BitmapFactory.decodeStream(input, null, bitmapOptions);
                 input.close();
             }
+            // garbage collection at this point saves much RAM for large source images
             System.gc();
             return bitmap;
         }
@@ -2701,6 +2700,8 @@ public class CacheDetailActivity extends AbstractActivity {
                 return k;
         }
 
+        // This is used for a workaround of an android bug, where the Uri is not available inside the
+        // onActivityResult method
         private Uri lastPhotoUri;
 
         @Override
@@ -2723,7 +2724,6 @@ public class CacheDetailActivity extends AbstractActivity {
         private class AddPhotoClickListener implements View.OnClickListener {
 
             public void onClick(View view) {
-                // http://developer.android.com/guide/topics/media/camera.html
                 // create Intent to take a picture and return control to the calling application
                 Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 

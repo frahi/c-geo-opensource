@@ -2,11 +2,14 @@ package cgeo.geocaching.offlinenotes;
 
 import cgeo.geocaching.geopoint.Geopoint;
 
+import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Environment;
 import android.util.Log;
 
 import java.io.File;
+import java.io.IOException;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -63,6 +66,10 @@ public class OfflineNote implements Comparable
         return coordinate;
     }
 
+    public void setCoordinate(Geopoint coordinate) {
+        this.coordinate = coordinate;
+    }
+
     public void setDescription(String description) {
         this.description = description;
     }
@@ -85,8 +92,34 @@ public class OfflineNote implements Comparable
             String ext = getExtension(filename).toLowerCase();
             if (ext.equals("jpg")) {
                 File file = new File(filename);
-                // todo extract coord, date and desc
                 OfflineNote note = new OfflineNote(Uri.fromFile(file), NOTE_TYPE_IMAGE);
+
+                try {
+                    ExifInterface exif = new ExifInterface(filename);
+
+                    // extract date
+                    String dateString = exif.getAttribute(ExifInterface.TAG_DATETIME);
+                    if (dateString != null) {
+                        SimpleDateFormat dateParser = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss");
+                        Date imageDate = dateParser.parse(dateString);
+                        note.setDate(imageDate);
+                    }
+
+                    // extract coord
+                    String lat = exif.getAttribute(ExifInterface.TAG_GPS_LATITUDE);
+                    String latRef = exif.getAttribute(ExifInterface.TAG_GPS_LATITUDE_REF);
+                    String longitude = exif.getAttribute(ExifInterface.TAG_GPS_LONGITUDE);
+                    String longitudeRef = exif.getAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF);
+                    Geopoint geoPoint = parseCoord(lat, latRef, longitude, longitudeRef);
+                    note.setCoordinate(geoPoint);
+
+                } catch (IOException e) {
+                    Log.d("OfflineNote", "Could not load EXIF header of file");
+                } catch (ParseException e) {
+                    Log.d("OfflineNote", "Image file EXIF header attribute DATE has unknown format");
+                }
+
+
                 offlineNotes.add(note);
             }
             if (ext.equals("mp4")) {
@@ -101,6 +134,74 @@ public class OfflineNote implements Comparable
         Collections.sort(offlineNotes);
 
         return offlineNotes;
+    }
+
+    protected static Geopoint parseCoord(String latitude, String latitudeRef, String longitude, String longitudeRef) {
+        if ((latitude == null) || latitude.equals("")
+                || (latitudeRef == null) || latitudeRef.equals("")
+                || (longitude == null) || longitude.equals("")
+                || (longitudeRef == null) || longitudeRef.equals(""))
+        {
+            return null;
+        }
+
+        Float latitudeFloat;
+        Float longitudeFloat;
+        if (latitudeRef.equals("N")) {
+            latitudeFloat = convertToDegree(latitude);
+        } else {
+            latitudeFloat = 0 - convertToDegree(latitude);
+        }
+
+        if (longitudeRef.equals("E")) {
+            longitudeFloat = convertToDegree(longitude);
+        } else {
+            longitudeFloat = 0 - convertToDegree(longitude);
+        }
+
+        // TODO better use exceptions so we can make a geocache in greenwich :)
+        if ((latitudeFloat == 0.0) || (longitudeFloat == 0.0)) {
+            return null;
+        }
+
+        return new Geopoint(latitudeFloat, longitudeFloat);
+    }
+
+    // helper function for parseCoord
+    private static Float convertToDegree(String stringDMS) {
+        Float result = null;
+        String[] DMS = stringDMS.split(",", 3);
+        if (DMS.length != 3)
+            return new Float(0.0);
+
+        String[] stringD = DMS[0].split("/", 2);
+        if (stringD.length != 2)
+            return new Float(0.0);
+        Double D0 = new Double(stringD[0]);
+        Double D1 = new Double(stringD[1]);
+        Double FloatD = D0 / D1;
+
+        String[] stringM = DMS[1].split("/", 2);
+        if (stringM.length != 2)
+            return new Float(0.0);
+        Double M0 = new Double(stringM[0]);
+        Double M1 = new Double(stringM[1]);
+        Double FloatM = M0 / M1;
+
+        String[] stringS = DMS[2].split("/", 2);
+        if (stringS.length != 2)
+            return new Float(0.0);
+        Double S0 = new Double(stringS[0]);
+        Double S1 = new Double(stringS[1]);
+        Double FloatS = S0 / S1;
+
+        result = new Float(FloatD + (FloatM / 60) + (FloatS / 3600));
+
+        return result;
+    }
+
+    public void setDate(Date imageDate) {
+        myDate = imageDate;
     }
 
     private static String getExtension(String filename)
