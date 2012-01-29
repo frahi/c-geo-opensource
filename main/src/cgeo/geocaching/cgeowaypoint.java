@@ -209,7 +209,7 @@ public class cgeowaypoint extends AbstractActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        menu.add(0, MENU_ID_DEFAULT_NAVIGATION, 0, res.getString(R.string.cache_menu_default_navigation)).setIcon(android.R.drawable.ic_menu_compass); // default navigation tool
+        menu.add(0, MENU_ID_DEFAULT_NAVIGATION, 0, NavigationAppFactory.getDefaultNavigationApplication(this).getName()).setIcon(android.R.drawable.ic_menu_compass); // default navigation tool
 
         SubMenu subMenu = menu.addSubMenu(1, MENU_ID_NAVIGATION, 0, res.getString(R.string.cache_menu_navigate)).setIcon(android.R.drawable.ic_menu_mapmode);
         addNavigationMenuItems(subMenu);
@@ -294,7 +294,7 @@ public class cgeowaypoint extends AbstractActivity {
         }
     }
 
-    private static class update implements UpdateLocationCallback {
+    private class update implements UpdateLocationCallback {
 
         @Override
         public void updateLocation(cgGeo geo) {
@@ -315,6 +315,7 @@ public class cgeowaypoint extends AbstractActivity {
 
         public void onClick(View arg0) {
             if (app.deleteWaypoint(id)) {
+                StaticMapsProvider.removeWpStaticMaps(id, geocode);
                 cgeoapplication.removeCacheFromCache(geocode);
 
                 finish();

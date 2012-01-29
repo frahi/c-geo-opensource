@@ -144,6 +144,7 @@
   <string name="err_detail_no_spoiler">c:geo hat kein Hinweisbild für diesen Cache gefunden.</string>
   <string name="err_detail_no_map_static">c:geo hat keine statische Karte für diesen Cache gefunden.</string>
   <string name="err_detail_not_load_map_static">c:geo konnte die statische Karte nicht laden.</string>
+  <string name="err_detail_ask_store_map_static">c:geo konnte die statische Karte nicht laden. Jetzt speichern?</string>
   <string name="err_detail_still_working">Arbeite noch an anderer Aufgabe.</string>
   <string name="err_watchlist_still_managing">c:geo versucht noch immer deine Watchlist zu aktualisieren.</string>
   <string name="err_watchlist_failed">Ändern der Watchlist nicht erfolgreich.</string>
@@ -222,6 +223,7 @@
   <string name="info_log_type_changed">Logtyp wurde verändert!</string>
 
   <string name="info_fieldnotes_exported_to">Field-Notes exportiert nach</string>
+  <string name="info_storing_static_maps">Versuche, statische Karten zu speichern</string>
 
   <!-- location service -->
   <string name="loc_last">Letzte Position</string>
@@ -381,7 +383,8 @@
   <string name="init_showwaypoints">Wegpunkte auf Live-Karte zeigen</string>
   <string name="init_showwaypoint_description">Wenn weniger als die angegebene Anzahl an Caches auf der Karte sichtbar sind, werden zusätzlich deren Wegpunkte angezeigt.</string>
   <string name="init_disabled">Deaktivierte Caches ausblenden</string>
-  <string name="init_offline">Statische Karten für Offline-Verwendung speichern</string>
+  <string name="init_offline">Statische Karten zum Cache für Offline-Verwendung speichern</string>
+  <string name="init_offline_wp">Statische Karten zu Wegpunkten für Offline-Verwendung speichern</string>
   <string name="init_save_log_img">Logbilder abspeichern</string>
   <string name="init_units">Imperiale Einheiten (Meilen/Fuß)</string>
   <string name="init_nav">Google Navigation verwenden</string>
@@ -466,12 +469,13 @@
   <string name="cache_attributes_no_icons">(aktualisiere den Cache um die Attribut-Icons anzuzeigen)</string>
   <string name="cache_inventory">Inventar</string>
   <string name="cache_log_offline">Offline-Log</string>
-  <string name="cache_log_images_loading">Lade Logbild …</string>
+  <string name="cache_log_images_loading">Lade Logbild…</string>
   <string name="cache_log_images_title">Logbild</string>
   <string name="cache_log_image_default_title">Bild</string>
   <string name="cache_personal_note">Persönliche Notiz</string>
   <string name="cache_description">Beschreibung</string>
   <string name="cache_description_long">Ausführliche Beschreibung</string>
+  <string name="cache_description_table_note">Diese Beschreibung enthält Tabellenelemente, die evtl. nur auf Geocaching.com korrekt angezeigt werden.</string>
   <string name="cache_watchlist">Watchlist</string>
   <string name="cache_watchlist_on">Dieser Cache ist auf deiner Watchlist.</string>
   <string name="cache_watchlist_not_on">Dieser Cache ist nicht auf deiner Watchlist.</string>
@@ -505,7 +509,6 @@
   <string name="cache_dialog_watchlist_add_message">Füge den Cache deiner Watchlist hinzu…</string>
   <string name="cache_dialog_watchlist_remove_title">Watchlist</string>
   <string name="cache_dialog_watchlist_remove_message">Entferne den Cache von deiner Watchlist…</string>
-  <string name="cache_menu_default_navigation">Standardnavigation</string>
   <string name="cache_menu_navigate">Navigieren</string>
   <string name="cache_menu_compass">Kompass</string>
   <string name="cache_menu_tbt">Google Maps Navigation</string>

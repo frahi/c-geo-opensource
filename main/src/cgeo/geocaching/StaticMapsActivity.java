@@ -4,7 +4,9 @@ import cgeo.geocaching.activity.AbstractActivity;
 
 import org.apache.commons.collections.CollectionUtils;
 
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
@@ -21,6 +23,7 @@ import java.util.List;
 public class StaticMapsActivity extends AbstractActivity {
 
     private final List<Bitmap> maps = new ArrayList<Bitmap>();
+    private Integer waypoint_id = null;
     private String geocode = null;
     private LayoutInflater inflater = null;
     private ProgressDialog waitDialog = null;
@@ -36,9 +39,14 @@ public class StaticMapsActivity extends AbstractActivity {
                         waitDialog.dismiss();
                     }
 
-                    showToast(res.getString(R.string.err_detail_not_load_map_static));
-
-                    finish();
+                    if ((waypoint_id != null && Settings.isStoreOfflineWpMaps()) || (waypoint_id == null && Settings.isStoreOfflineMaps())) {
+                        AlertDialog.Builder builder = new AlertDialog.Builder(StaticMapsActivity.this);
+                        builder.setMessage(R.string.err_detail_ask_store_map_static).setPositiveButton(android.R.string.yes, dialogClickListener)
+                                .setNegativeButton(android.R.string.no, dialogClickListener).show();
+                    } else {
+                        showToast(res.getString(R.string.err_detail_not_load_map_static));
+                        finish();
+                    }
                     return;
                 } else {
                     if (waitDialog != null) {
@@ -71,6 +79,35 @@ public class StaticMapsActivity extends AbstractActivity {
         }
     };
 
+    DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+            dialog.dismiss();
+            switch (which) {
+            case DialogInterface.BUTTON_POSITIVE:
+                    cgCache cache = app.getCacheByGeocode(geocode);
+                    if (waypoint_id == null) {
+                        StaticMapsProvider.storeCacheStaticMap(cache, StaticMapsActivity.this);
+                    } else {
+                        cgWaypoint waypoint = cache.getWaypointById(waypoint_id);
+                        if (waypoint != null) {
+                            StaticMapsProvider.storeWaypointStaticMap(cache, StaticMapsActivity.this, waypoint);
+                        } else {
+                            showToast(res.getString(R.string.err_detail_not_load_map_static));
+                            break;
+                        }
+                    }
+                    showToast(res.getString(R.string.info_storing_static_maps));
+                break;
+
+            case DialogInterface.BUTTON_NEGATIVE:
+                    showToast(res.getString(R.string.err_detail_not_load_map_static));
+                break;
+            }
+            finish();
+        }
+    };
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -85,6 +122,9 @@ public class StaticMapsActivity extends AbstractActivity {
         // try to get data from extras
         if (extras != null) {
             geocode = extras.getString("geocode");
+            if (extras.containsKey("waypoint")) {
+                waypoint_id = extras.getInt("waypoint");
+            }
         }
 
         if (geocode == null) {
@@ -116,9 +156,16 @@ public class StaticMapsActivity extends AbstractActivity {
 
                 for (int level = 1; level <= 5; level++) {
                     try {
-                        final Bitmap image = BitmapFactory.decodeFile(StaticMapsProvider.getMapFile(geocode, level, false).getPath());
-                        if (image != null) {
-                            maps.add(image);
+                        if (waypoint_id != null) {
+                            final Bitmap image = BitmapFactory.decodeFile(StaticMapsProvider.getMapFile(geocode, "wp" + waypoint_id + "_", level, false).getPath());
+                            if (image != null) {
+                                maps.add(image);
+                            }
+                        } else {
+                            final Bitmap image = BitmapFactory.decodeFile(StaticMapsProvider.getMapFile(geocode, "", level, false).getPath());
+                            if (image != null) {
+                                maps.add(image);
+                            }
                         }
                     } catch (Exception e) {
                         Log.e(Settings.tag, "StaticMapsActivity.LoadMapsThread.run.1: " + e.toString());
@@ -128,9 +175,16 @@ public class StaticMapsActivity extends AbstractActivity {
                 if (maps.isEmpty()) {
                     for (int level = 1; level <= 5; level++) {
                         try {
-                            final Bitmap image = BitmapFactory.decodeFile(StaticMapsProvider.getMapFile(geocode, level, false).getPath());
-                            if (image != null) {
-                                maps.add(image);
+                            if (waypoint_id != null) {
+                                final Bitmap image = BitmapFactory.decodeFile(StaticMapsProvider.getMapFile(geocode, "wp" + waypoint_id + "_", level, false).getPath());
+                                if (image != null) {
+                                    maps.add(image);
+                                }
+                            } else {
+                                final Bitmap image = BitmapFactory.decodeFile(StaticMapsProvider.getMapFile(geocode, "", level, false).getPath());
+                                if (image != null) {
+                                    maps.add(image);
+                                }
                             }
                         } catch (Exception e) {
                             Log.e(Settings.tag, "StaticMapsActivity.LoadMapsThread.run.2: " + e.toString());

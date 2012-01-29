@@ -133,7 +133,7 @@ public class cgeopopup extends AbstractActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        menu.add(0, 2, 0, res.getString(R.string.cache_menu_default_navigation)).setIcon(android.R.drawable.ic_menu_compass); // default navigation tool
+        menu.add(0, 2, 0, NavigationAppFactory.getDefaultNavigationApplication(this).getName()).setIcon(android.R.drawable.ic_menu_compass); // default navigation tool
 
         SubMenu subMenu = menu.addSubMenu(1, 0, 0, res.getString(R.string.cache_menu_navigate)).setIcon(android.R.drawable.ic_menu_mapmode);
         NavigationAppFactory.addMenuItems(subMenu, this);
@@ -561,7 +561,7 @@ public class cgeopopup extends AbstractActivity {
 
         @Override
         public void run() {
-            cgBase.storeCache(app, cgeopopup.this, cache, null, 1, handler);
+            cache.store(cgeopopup.this, handler);
         }
     }
 
@@ -626,22 +626,12 @@ public class cgeopopup extends AbstractActivity {
      * @param view
      *            unused here but needed since this method is referenced from XML layout
      */
-    public void goCompass(View view) {
+    public void goDefaultNavigation(View view) {
         if (cache == null || cache.getCoords() == null) {
             showToast(res.getString(R.string.cache_coordinates_no));
             return;
         }
-
-        cgeonavigate navigateActivity = new cgeonavigate();
-
-        Intent navigateIntent = new Intent(cgeopopup.this, navigateActivity.getClass());
-        navigateIntent.putExtra("latitude", cache.getCoords().getLatitude());
-        navigateIntent.putExtra("longitude", cache.getCoords().getLongitude());
-        navigateIntent.putExtra("geocode", cache.getGeocode().toUpperCase());
-        navigateIntent.putExtra("name", cache.getName());
-
-        startActivity(navigateIntent);
-
+        NavigationAppFactory.startDefaultNavigationApplication(geo, this, cache, null, null, null);
         finish();
     }
 

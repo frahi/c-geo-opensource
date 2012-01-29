@@ -1,12 +1,14 @@
 package cgeo.geocaching;
 
-import cgeo.geocaching.LogTemplateProvider.LogTemplate;
 import cgeo.geocaching.activity.AbstractActivity;
 import cgeo.geocaching.enumerations.LogType;
 import cgeo.geocaching.enumerations.LogTypeTrackable;
 import cgeo.geocaching.enumerations.StatusCode;
 import cgeo.geocaching.gcvote.GCVote;
+import cgeo.geocaching.network.Parameters;
 import cgeo.geocaching.ui.DateDialog;
+import cgeo.geocaching.utils.LogTemplateProvider;
+import cgeo.geocaching.utils.LogTemplateProvider.LogTemplate;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -709,11 +711,6 @@ public class VisitCacheActivity extends AbstractActivity implements DateDialog.D
                     }
                 }
 
-                if (cache != null) {
-                    cgeoapplication.putCacheInCache(cache);
-                } else {
-                    cgeoapplication.removeCacheFromCache(geocode);
-                }
             }
 
             if (status == StatusCode.NO_ERROR) {

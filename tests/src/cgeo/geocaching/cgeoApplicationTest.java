@@ -80,7 +80,7 @@ public class cgeoApplicationTest extends ApplicationTestCase<cgeoapplication> {
         assertEquals("Niedersachsen, Germany", tb.getOrigin());
         assertEquals("blafoo", tb.getOwner());
         assertEquals("0564a940-8311-40ee-8e76-7e91b2cf6284", tb.getOwnerGuid());
-        assertEquals("Kinder erfreuen.<br/><br/>Make children happy.", tb.getGoal());
+        assertEquals("Kinder erfreuen.<br /><br />Make children happy.", tb.getGoal());
         assertTrue(tb.getDetails().startsWith("Auf der CD sind"));
         assertEquals("http://img.geocaching.com/track/display/38382780-87a7-4393-8393-78841678ee8c.jpg", tb.getImage());
         // Following data can change over time
@@ -134,7 +134,7 @@ public class cgeoApplicationTest extends ApplicationTestCase<cgeoapplication> {
             assertNotNull(search);
             assertEquals(1, search.getGeocodes().size());
             assertTrue(search.getGeocodes().contains(cache.getGeocode()));
-            cgCache searchedCache = search.cacheList.get(0);
+            cgCache searchedCache = cgBase.getFirstElementFromSet(search.cacheList);
             // coords must be null if the user is not logged in
             assertNull(searchedCache.getCoords());
 

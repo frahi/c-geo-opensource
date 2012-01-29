@@ -1245,6 +1245,10 @@ public class cgData {
         return cacheid;
     }
 
+    /**
+     * @param cache
+     * @return true = cache saved successfully to the DB
+     */
     public boolean saveCache(cgCache cache) {
         //LeeB - writing to the DB is slow
         if (cache == null) {
@@ -1254,6 +1258,11 @@ public class cgData {
         // remember this cache in the caches cache. it is highly likely that we will need it in a few moments and
         // this way we also remove any stale instance from the caches cache
         cgeoapplication.putCacheInCache(cache);
+
+        // only save fully detailed caches in the database
+        if (!cache.isDetailed()) {
+            return false;
+        }
 
         ContentValues values = new ContentValues();
 
@@ -1483,7 +1492,8 @@ public class cgData {
                     putCoords(values, oneWaypoint.getCoords());
                     values.put("note", oneWaypoint.getNote());
 
-                    databaseRW.insert(dbTableWaypoints, null, values);
+                    final long rowId = databaseRW.insert(dbTableWaypoints, null, values);
+                    oneWaypoint.setId((int) rowId);
                 }
             }
 
@@ -1550,7 +1560,8 @@ public class cgData {
             values.put("note", waypoint.getNote());
 
             if (id <= 0) {
-                databaseRW.insert(dbTableWaypoints, null, values);
+                final long rowId = databaseRW.insert(dbTableWaypoints, null, values);
+                waypoint.setId((int) rowId);
                 ok = true;
             } else {
                 final int rows = databaseRW.update(dbTableWaypoints, values, "_id = " + id, null);
@@ -1837,26 +1848,43 @@ public class cgData {
      */
 
     public cgCache loadCache(final String geocode, final EnumSet<LoadFlag> loadFlags) {
-        Object[] geocodes = new Object[1];
-
-        if (StringUtils.isNotBlank(geocode)) {
-            geocodes[0] = geocode;
-        } else {
-            geocodes = null;
+        if (StringUtils.isBlank(geocode)) {
+            return null;
         }
 
-        List<cgCache> caches = loadCaches(geocodes, null, null, null, null, loadFlags);
-        if (CollectionUtils.isNotEmpty(caches)) {
-            return caches.get(0);
-        }
+        Set<String> geocodes = new HashSet<String>();
+        geocodes.add(geocode);
 
-        return null;
+        Set<cgCache> caches = loadCaches(geocodes, loadFlags);
+        return cgBase.getFirstElementFromSet(caches);
     }
 
-    public List<cgCache> loadCaches(final Object[] geocodes, final Long centerLat, final Long centerLon, final Long spanLat, final Long spanLon, final EnumSet<LoadFlag> loadFlags) {
+    public Set<cgCache> loadCaches(final Set<String> geocodes, final EnumSet<LoadFlag> loadFlags) {
+        if (geocodes == null || geocodes.size() == 0) {
+            return new HashSet<cgCache>();
+        }
+
+        Set<cgCache> result = new HashSet<cgCache>();
+        Set<String> remainingGeocodes = new HashSet<String>();
+        for (String geocode : geocodes) {
+            cgCache cache = cgeoapplication.getCacheFromCache(geocode);
+            if (cache != null) {
+                result.add(cache);
+            } else {
+                remainingGeocodes.add(geocode);
+            }
+        }
+        Set<cgCache> cachesFromDB = loadCaches(remainingGeocodes, null, null, null, null, loadFlags);
+        if (cachesFromDB != null) {
+            result.addAll(cachesFromDB);
+        }
+        return result;
+    }
+
+    public Set<cgCache> loadCaches(final Set<String> geocodes, final Long centerLat, final Long centerLon, final Long spanLat, final Long spanLon, final EnumSet<LoadFlag> loadFlags) {
         init();
         // Using more than one of the parametersets results in overly comlex wheres
-        if ((geocodes != null && geocodes.length > 0)
+        if ((geocodes != null && geocodes.size() > 0)
                 && centerLat != null
                 && centerLon != null
                 && spanLat != null
@@ -1865,10 +1893,10 @@ public class cgData {
         }
         StringBuilder where = new StringBuilder();
         Cursor cursor = null;
-        List<cgCache> caches = new ArrayList<cgCache>();
+        final Set<cgCache> caches = new HashSet<cgCache>();
 
         try {
-            if (geocodes != null && geocodes.length > 0) {
+            if (geocodes != null && geocodes.size() > 0) {
                 StringBuilder all = new StringBuilder();
                 for (Object one : geocodes) {
                     if (all.length() > 0) {
@@ -1991,12 +2019,10 @@ public class cgData {
                             cache.setLogOffline(hasLogOffline(cache.getGeocode()));
                         }
                         cache.addStorageLocation(StorageLocation.DATABASE);
+                        cgeoapplication.putCacheInCache(cache);
 
                         caches.add(cache);
                     } while (cursor.moveToNext());
-                } else {
-                    cursor.close();
-                    return null;
                 }
             }
         } catch (Exception e) {

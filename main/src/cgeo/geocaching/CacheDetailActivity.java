@@ -1,5 +1,6 @@
 package cgeo.geocaching;
 
+import cgeo.calendar.ICalendar;
 import cgeo.geocaching.cgData.StorageLocation;
 import cgeo.geocaching.activity.AbstractActivity;
 import cgeo.geocaching.activity.Progress;
@@ -9,8 +10,10 @@ import cgeo.geocaching.compatibility.Compatibility;
 import cgeo.geocaching.connector.ConnectorFactory;
 import cgeo.geocaching.connector.IConnector;
 import cgeo.geocaching.enumerations.LogType;
+import cgeo.geocaching.enumerations.WaypointType;
 import cgeo.geocaching.geopoint.GeopointFormatter;
 import cgeo.geocaching.network.HtmlImage;
+import cgeo.geocaching.network.Parameters;
 import cgeo.geocaching.offlinenotes.OfflineNote;
 import cgeo.geocaching.utils.BaseUtils;
 import cgeo.geocaching.utils.CancellableHandler;
@@ -391,7 +394,7 @@ public class CacheDetailActivity extends AbstractActivity {
                                     menu.add(CONTEXT_MENU_WAYPOINT_DELETE, index, 0, R.string.waypoint_delete);
                                 }
                                 if (waypoint.getCoords() != null) {
-                                    menu.add(CONTEXT_MENU_WAYPOINT_DEFAULT_NAVIGATION, index, 0, R.string.cache_menu_default_navigation);
+                                    menu.add(CONTEXT_MENU_WAYPOINT_DEFAULT_NAVIGATION, index, 0, NavigationAppFactory.getDefaultNavigationApplication(this).getName());
                                     SubMenu subMenu = menu.addSubMenu(CONTEXT_MENU_WAYPOINT_NAVIGATE, index, 0, R.string.cache_menu_navigate).setIcon(android.R.drawable.ic_menu_mapmode);
                                     NavigationAppFactory.addMenuItems(subMenu, this);
                                     menu.add(CONTEXT_MENU_WAYPOINT_CACHES_AROUND, index, 0, R.string.cache_menu_around);
@@ -483,7 +486,7 @@ public class CacheDetailActivity extends AbstractActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         if (null != cache) {
-            menu.add(0, MENU_DEFAULT_NAVIGATION, 0, res.getString(R.string.cache_menu_default_navigation)).setIcon(android.R.drawable.ic_menu_compass); // default navigation tool
+            menu.add(0, MENU_DEFAULT_NAVIGATION, 0, NavigationAppFactory.getDefaultNavigationApplication(this).getName()).setIcon(android.R.drawable.ic_menu_compass); // default navigation tool
 
             final SubMenu subMenu = menu.addSubMenu(1, 0, 0, res.getString(R.string.cache_menu_navigate)).setIcon(android.R.drawable.ic_menu_mapmode);
             NavigationAppFactory.addMenuItems(subMenu, this);
@@ -531,6 +534,7 @@ public class CacheDetailActivity extends AbstractActivity {
             return true;
         } else if (menuItem == MENU_CALENDAR) {
             addToCalendar();
+            //addToCalendarWithIntent();
             return true;
         } else if (menuItem == MENU_SHARE) {
             if (cache != null) {
@@ -732,6 +736,23 @@ public class CacheDetailActivity extends AbstractActivity {
         cgeocaches.startActivityCachesAround(this, cache.getCoords());
 
         finish();
+    }
+
+    private void addToCalendarWithIntent() {
+        // this method is NOT unused :)
+        final Parameters params = new Parameters(
+                ICalendar.PARAM_NAME, cache.getName(),
+                ICalendar.PARAM_NOTE, StringUtils.defaultString(cache.getPersonalNote()),
+                ICalendar.PARAM_HIDDEN_DATE, String.valueOf(cache.getHiddenDate().getTime()),
+                ICalendar.PARAM_URL, StringUtils.defaultString(cache.getUrl()),
+                ICalendar.PARAM_COORDS, cache.getCoords() == null ? "" : cache.getCoords().format(GeopointFormatter.Format.LAT_LON_DECMINUTE_RAW),
+                ICalendar.PARAM_LOCATION, StringUtils.defaultString(cache.getLocation()),
+                ICalendar.PARAM_SHORT_DESC, StringUtils.defaultString(cache.getShortDescription())
+                );
+
+        // TODO: Check if addon is installed, if not, tell the user how to get it.
+        startActivity(new Intent(ICalendar.INTENT,
+                Uri.parse(ICalendar.URI_SCHEME + "://" + ICalendar.URI_HOST + "?" + params.toString())));
     }
 
     /**
@@ -1688,8 +1709,7 @@ public class CacheDetailActivity extends AbstractActivity {
 
             @Override
             public void run() {
-                int listId = cache.getListId() > 1 ? cache.getListId() : 1;
-                cgBase.storeCache(app, CacheDetailActivity.this, cache, null, listId, handler);
+                cache.store(CacheDetailActivity.this, handler);
             }
         }
 
@@ -1922,6 +1942,7 @@ public class CacheDetailActivity extends AbstractActivity {
                     final int width = metrics.widthPixels;
                     final int height = (int) (110 * metrics.density);
 
+                    // TODO move this code to StaticMapProvider and use its constant values
                     final String markerUrl = cgBase.urlencode_rfc3986("http://cgeo.carnero.cc/_markers/my_location_mdpi.png");
 
                     final HtmlImage mapGetter = new HtmlImage(CacheDetailActivity.this, cache.getGeocode(), false, 0, false);
@@ -2349,7 +2370,9 @@ public class CacheDetailActivity extends AbstractActivity {
                         }
 
                         ((TextView) rowView.findViewById(R.id.author)).setOnClickListener(new UserActionsClickListener());
-                        ((TextView) logLayout.findViewById(R.id.log)).setOnClickListener(new DecryptLogClickListener());
+                        TextView logView = (TextView) logLayout.findViewById(R.id.log);
+                        logView.setMovementMethod(LinkMovementMethod.getInstance());
+                        logView.setOnClickListener(new DecryptLogClickListener());
 
                         loglist.add(rowView);
                     }
@@ -2452,8 +2475,8 @@ public class CacheDetailActivity extends AbstractActivity {
 
                     // info
                     final List<String> infoTextList = new ArrayList<String>(3);
-                    if (StringUtils.isNotBlank(cgBase.waypointTypes.get(wpt.getWaypointType()))) {
-                        infoTextList.add(cgBase.waypointTypes.get(wpt.getWaypointType()));
+                    if (WaypointType.ALL_TYPES_EXCEPT_OWN.containsKey(wpt.getWaypointType())) {
+                        infoTextList.add(wpt.getWaypointType().getL10n());
                     }
                     if (cgWaypoint.PREFIX_OWN.equalsIgnoreCase(wpt.getPrefix())) {
                         infoTextList.add(res.getString(R.string.waypoint_custom));
