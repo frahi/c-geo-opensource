@@ -20,6 +20,7 @@ import cgeo.geocaching.geopoint.IConversion;
 import cgeo.geocaching.geopoint.Viewport;
 import cgeo.geocaching.network.HtmlImage;
 import cgeo.geocaching.twitter.Twitter;
+import cgeo.geocaching.ui.DirectionImage;
 import cgeo.geocaching.utils.BaseUtils;
 import cgeo.geocaching.utils.CancellableHandler;
 
@@ -134,8 +135,6 @@ public class cgBase {
 
     private static Context context;
     private static Resources res;
-
-    final private static Map<String, Integer> gcIcons = new HashMap<String, Integer>();
 
     private static final int NB_DOWNLOAD_RETRIES = 4;
 
@@ -659,7 +658,7 @@ public class cgBase {
         {
             for (cgCache oneCache : parseResult.cacheList) {
                 if (oneCache.getCoords() == null && StringUtils.isNotEmpty(oneCache.getDirectionImg())) {
-                    cgDirectionImg.getDrawable(oneCache.getGeocode(), oneCache.getDirectionImg());
+                    DirectionImage.getDrawable(oneCache.getGeocode(), oneCache.getDirectionImg());
                 }
             }
         }
@@ -715,7 +714,7 @@ public class cgBase {
             final JSONObject extra = dataJSON.getJSONObject("cs");
             if (extra != null && extra.length() > 0) {
                 int count = extra.getInt("count");
-                // unused, meaning not clearn boolean li = extra.getBoolean("li");
+                // unused, meaning not clear boolean li = extra.getBoolean("li");
                 // expected meaning pm=premium member
                 boolean pm = extra.getBoolean("pm");
                 if (Settings.isPremiumMember() && !pm) {
@@ -1093,6 +1092,7 @@ public class cgBase {
                 final cgWaypoint waypoint = new cgWaypoint(res.getString(R.string.cache_coordinates_original), WaypointType.WAYPOINT);
                 waypoint.setCoords(new Geopoint(originalCoords));
                 cache.addWaypoint(waypoint);
+                cache.setUserModifiedCoords(true);
             }
         } catch (Geopoint.GeopointException e) {
         }
@@ -1183,7 +1183,6 @@ public class cgBase {
         //cache.setLogs(loadLogsFromDetails(page, cache, false));
         if (Settings.isFriendLogsWanted()) {
             sendLoadProgressDetail(handler, R.string.cache_dialog_loading_details_status_logs);
-            int position = 0;
             List<cgLog> allLogs = cache.getLogs();
             List<cgLog> friendLogs = loadLogsFromDetails(page, cache, true, false);
             if (friendLogs != null) {
@@ -1191,7 +1190,7 @@ public class cgBase {
                     if (allLogs.contains(log)) {
                         allLogs.get(allLogs.indexOf(log)).friend = true;
                     } else {
-                        allLogs.add(position++, log);
+                        allLogs.add(log);
                     }
                 }
             }
@@ -2674,7 +2673,7 @@ public class cgBase {
             }
 
             // store images from logs
-            if (Settings.isStoreLogImages() && cache.getLogs(true) != null) {
+            if (Settings.isStoreLogImages()) {
                 for (cgLog log : cache.getLogs(true)) {
                     if (CollectionUtils.isNotEmpty(log.logImages)) {
                         for (cgImage oneLogImg : log.logImages) {
@@ -2696,7 +2695,7 @@ public class cgBase {
             }
 
             app.markStored(cache.getGeocode(), listId);
-            app.removeCacheFromCache(cache.getGeocode());
+            cgeoapplication.removeCacheFromCache(cache.getGeocode());
 
             if (handler != null) {
                 handler.sendMessage(new Message());
@@ -2709,7 +2708,7 @@ public class cgBase {
     public static void dropCache(final cgeoapplication app, final cgCache cache, final Handler handler) {
         try {
             app.markDropped(cache.getGeocode());
-            app.removeCacheFromCache(cache.getGeocode());
+            cgeoapplication.removeCacheFromCache(cache.getGeocode());
 
             handler.sendMessage(new Message());
         } catch (Exception e) {
@@ -2867,122 +2866,6 @@ public class cgBase {
             }
         }
         return out;
-    }
-
-    public static int getCacheIcon(final CacheType cacheType) {
-        final String type = cacheType.id;
-        fillIconsMap();
-        Integer iconId = gcIcons.get("type_" + type);
-        if (iconId != null) {
-            return iconId;
-        }
-        // fallback to traditional if some icon type is not correct
-        return gcIcons.get("type_traditional");
-    }
-
-    public static int getCacheMarkerIcon(final CacheType cacheType, final boolean own, final boolean found, final boolean disabled) {
-        fillIconsMap();
-
-        int icon = -1;
-        String iconTxt = null;
-
-        final String type = cacheType != null ? cacheType.id : null;
-
-        if (StringUtils.isNotBlank(type)) {
-            if (own) {
-                iconTxt = type + "-own";
-            } else if (found) {
-                iconTxt = type + "-found";
-            } else if (disabled) {
-                iconTxt = type + "-disabled";
-            } else {
-                iconTxt = type;
-            }
-        } else {
-            iconTxt = CacheType.TRADITIONAL.id;
-        }
-
-        if (gcIcons.containsKey(iconTxt)) {
-            icon = gcIcons.get(iconTxt);
-        } else {
-            icon = gcIcons.get(CacheType.TRADITIONAL.id);
-        }
-
-        return icon;
-    }
-
-    private static void fillIconsMap() {
-        if (gcIcons.isEmpty()) {
-            gcIcons.put("type_ape", R.drawable.type_ape);
-            gcIcons.put("type_cito", R.drawable.type_cito);
-            gcIcons.put("type_earth", R.drawable.type_earth);
-            gcIcons.put("type_event", R.drawable.type_event);
-            gcIcons.put("type_letterbox", R.drawable.type_letterbox);
-            gcIcons.put("type_mega", R.drawable.type_mega);
-            gcIcons.put("type_multi", R.drawable.type_multi);
-            gcIcons.put("type_traditional", R.drawable.type_traditional);
-            gcIcons.put("type_virtual", R.drawable.type_virtual);
-            gcIcons.put("type_webcam", R.drawable.type_webcam);
-            gcIcons.put("type_wherigo", R.drawable.type_wherigo);
-            gcIcons.put("type_mystery", R.drawable.type_mystery);
-            gcIcons.put("type_gchq", R.drawable.type_hq);
-            // default markers
-            gcIcons.put(CacheType.PROJECT_APE.id, R.drawable.marker_cache_ape);
-            gcIcons.put(CacheType.CITO.id, R.drawable.marker_cache_cito);
-            gcIcons.put(CacheType.EARTH.id, R.drawable.marker_cache_earth);
-            gcIcons.put(CacheType.EVENT.id, R.drawable.marker_cache_event);
-            gcIcons.put(CacheType.LETTERBOX.id, R.drawable.marker_cache_letterbox);
-            gcIcons.put(CacheType.MEGA_EVENT.id, R.drawable.marker_cache_mega);
-            gcIcons.put(CacheType.MULTI.id, R.drawable.marker_cache_multi);
-            gcIcons.put(CacheType.TRADITIONAL.id, R.drawable.marker_cache_traditional);
-            gcIcons.put(CacheType.VIRTUAL.id, R.drawable.marker_cache_virtual);
-            gcIcons.put(CacheType.WEBCAM.id, R.drawable.marker_cache_webcam);
-            gcIcons.put(CacheType.WHERIGO.id, R.drawable.marker_cache_wherigo);
-            gcIcons.put(CacheType.MYSTERY.id, R.drawable.marker_cache_mystery);
-            gcIcons.put(CacheType.GCHQ.id, R.drawable.marker_cache_gchq);
-            // own cache markers
-            gcIcons.put("ape-own", R.drawable.marker_cache_ape_own);
-            gcIcons.put("cito-own", R.drawable.marker_cache_cito_own);
-            gcIcons.put("earth-own", R.drawable.marker_cache_earth_own);
-            gcIcons.put("event-own", R.drawable.marker_cache_event_own);
-            gcIcons.put("letterbox-own", R.drawable.marker_cache_letterbox_own);
-            gcIcons.put("mega-own", R.drawable.marker_cache_mega_own);
-            gcIcons.put("multi-own", R.drawable.marker_cache_multi_own);
-            gcIcons.put("traditional-own", R.drawable.marker_cache_traditional_own);
-            gcIcons.put("virtual-own", R.drawable.marker_cache_virtual_own);
-            gcIcons.put("webcam-own", R.drawable.marker_cache_webcam_own);
-            gcIcons.put("wherigo-own", R.drawable.marker_cache_wherigo_own);
-            gcIcons.put("mystery-own", R.drawable.marker_cache_mystery_own);
-            gcIcons.put("gchq-own", R.drawable.marker_cache_gchq_own);
-            // found cache markers
-            gcIcons.put("ape-found", R.drawable.marker_cache_ape_found);
-            gcIcons.put("cito-found", R.drawable.marker_cache_cito_found);
-            gcIcons.put("earth-found", R.drawable.marker_cache_earth_found);
-            gcIcons.put("event-found", R.drawable.marker_cache_event_found);
-            gcIcons.put("letterbox-found", R.drawable.marker_cache_letterbox_found);
-            gcIcons.put("mega-found", R.drawable.marker_cache_mega_found);
-            gcIcons.put("multi-found", R.drawable.marker_cache_multi_found);
-            gcIcons.put("traditional-found", R.drawable.marker_cache_traditional_found);
-            gcIcons.put("virtual-found", R.drawable.marker_cache_virtual_found);
-            gcIcons.put("webcam-found", R.drawable.marker_cache_webcam_found);
-            gcIcons.put("wherigo-found", R.drawable.marker_cache_wherigo_found);
-            gcIcons.put("mystery-found", R.drawable.marker_cache_mystery_found);
-            gcIcons.put("gchq-found", R.drawable.marker_cache_gchq_found);
-            // disabled cache markers
-            gcIcons.put("ape-disabled", R.drawable.marker_cache_ape_disabled);
-            gcIcons.put("cito-disabled", R.drawable.marker_cache_cito_disabled);
-            gcIcons.put("earth-disabled", R.drawable.marker_cache_earth_disabled);
-            gcIcons.put("event-disabled", R.drawable.marker_cache_event_disabled);
-            gcIcons.put("letterbox-disabled", R.drawable.marker_cache_letterbox_disabled);
-            gcIcons.put("mega-disabled", R.drawable.marker_cache_mega_disabled);
-            gcIcons.put("multi-disabled", R.drawable.marker_cache_multi_disabled);
-            gcIcons.put("traditional-disabled", R.drawable.marker_cache_traditional_disabled);
-            gcIcons.put("virtual-disabled", R.drawable.marker_cache_virtual_disabled);
-            gcIcons.put("webcam-disabled", R.drawable.marker_cache_webcam_disabled);
-            gcIcons.put("wherigo-disabled", R.drawable.marker_cache_wherigo_disabled);
-            gcIcons.put("mystery-disabled", R.drawable.marker_cache_mystery_disabled);
-            gcIcons.put("gchq-disabled", R.drawable.marker_cache_gchq_disabled);
-        }
     }
 
     public static boolean runNavigation(Activity activity, Resources res, Settings settings, final Geopoint coords) {

@@ -1,6 +1,6 @@
 package cgeo.geocaching;
 
-import cgeo.geocaching.cgData.StorageLocations;
+import cgeo.geocaching.cgData.StorageLocation;
 import cgeo.geocaching.activity.AbstractActivity;
 import cgeo.geocaching.activity.Progress;
 import cgeo.geocaching.apps.cache.GeneralAppsFactory;
@@ -35,6 +35,7 @@ import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
@@ -47,12 +48,15 @@ import android.provider.MediaStore;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v4.view.ViewPager.OnPageChangeListener;
+import android.text.Editable;
 import android.text.Html;
 import android.text.Spannable;
 import android.text.Spanned;
+import android.text.format.DateUtils;
 import android.text.method.LinkMovementMethod;
 import android.text.style.ImageSpan;
 import android.text.style.StrikethroughSpan;
+import android.text.style.StyleSpan;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.ContextMenu;
@@ -389,7 +393,7 @@ public class CacheDetailActivity extends AbstractActivity {
                                 if (waypoint.getCoords() != null) {
                                     menu.add(CONTEXT_MENU_WAYPOINT_DEFAULT_NAVIGATION, index, 0, R.string.cache_menu_default_navigation);
                                     SubMenu subMenu = menu.addSubMenu(CONTEXT_MENU_WAYPOINT_NAVIGATE, index, 0, R.string.cache_menu_navigate).setIcon(android.R.drawable.ic_menu_mapmode);
-                                    NavigationAppFactory.addMenuItems(subMenu, this, res);
+                                    NavigationAppFactory.addMenuItems(subMenu, this);
                                     menu.add(CONTEXT_MENU_WAYPOINT_CACHES_AROUND, index, 0, R.string.cache_menu_around);
                                 }
                                 break;
@@ -449,7 +453,7 @@ public class CacheDetailActivity extends AbstractActivity {
  {
                 final cgWaypoint waypoint = cache.getWaypoint(index);
                 if (waypoint != null) {
-                    NavigationAppFactory.startDefaultNavigationApplication(geolocation, this, getResources(), null, null, waypoint, null);
+                    NavigationAppFactory.startDefaultNavigationApplication(geolocation, this, null, null, waypoint, null);
                 }
                 }
                 break;
@@ -468,7 +472,7 @@ public class CacheDetailActivity extends AbstractActivity {
                 // First check the navigation menu, then the option items
                 final cgWaypoint waypoint = cache.getWaypoint(contextMenuWPIndex);
                 if (waypoint != null && NavigationAppFactory.onMenuItemSelected(item, geolocation, this,
-                        res, null, null, waypoint, null)) {
+                        null, null, waypoint, null)) {
                     return true;
                 }
                 return onOptionsItemSelected(item);
@@ -482,8 +486,8 @@ public class CacheDetailActivity extends AbstractActivity {
             menu.add(0, MENU_DEFAULT_NAVIGATION, 0, res.getString(R.string.cache_menu_default_navigation)).setIcon(android.R.drawable.ic_menu_compass); // default navigation tool
 
             final SubMenu subMenu = menu.addSubMenu(1, 0, 0, res.getString(R.string.cache_menu_navigate)).setIcon(android.R.drawable.ic_menu_mapmode);
-            NavigationAppFactory.addMenuItems(subMenu, this, res);
-            GeneralAppsFactory.addMenuItems(subMenu, this, res, cache);
+            NavigationAppFactory.addMenuItems(subMenu, this);
+            GeneralAppsFactory.addMenuItems(subMenu, this, cache);
 
             menu.add(1, MENU_CALENDAR, 0, res.getString(R.string.cache_menu_event)).setIcon(android.R.drawable.ic_menu_agenda); // add event to calendar
             addVisitMenu(menu, cache);
@@ -535,7 +539,7 @@ public class CacheDetailActivity extends AbstractActivity {
             }
             return false;
         }
-        if (NavigationAppFactory.onMenuItemSelected(item, geolocation, this, res, cache, search, null, null)) {
+        if (NavigationAppFactory.onMenuItemSelected(item, geolocation, this, cache, search, null, null)) {
             return true;
         }
         if (GeneralAppsFactory.onMenuItemSelected(item, this, cache)) {
@@ -561,7 +565,7 @@ public class CacheDetailActivity extends AbstractActivity {
                 }
 
                 if (SearchResult.getError(search) != null) {
-                    showToast(res.getString(R.string.err_dwld_details_failed_reason) + " " + SearchResult.getError(search) + ".");
+                    showToast(res.getString(R.string.err_dwld_details_failed) + " " + SearchResult.getError(search).getErrorString(res) + ".");
 
                     finish();
                     return;
@@ -612,7 +616,7 @@ public class CacheDetailActivity extends AbstractActivity {
         } else {
             setTitle(cache.getGeocode().toUpperCase());
         }
-        ((TextView) findViewById(R.id.actionbar_title)).setCompoundDrawablesWithIntrinsicBounds(getResources().getDrawable(cgBase.getCacheIcon(cache.getType())), null, null, null);
+        ((TextView) findViewById(R.id.actionbar_title)).setCompoundDrawablesWithIntrinsicBounds(getResources().getDrawable(cache.getType().markerId), null, null, null);
 
         // add available pages (remove old pages first)
         pageOrder.clear();
@@ -916,7 +920,7 @@ public class CacheDetailActivity extends AbstractActivity {
             return;
         }
 
-        NavigationAppFactory.startDefaultNavigationApplication(geolocation, this, getResources(), cache, search, null, null);
+        NavigationAppFactory.startDefaultNavigationApplication(geolocation, this, cache, search, null, null);
     }
 
     /**
@@ -924,6 +928,17 @@ public class CacheDetailActivity extends AbstractActivity {
      */
     public void startDefaultNavigation(@SuppressWarnings("unused") View view) {
         startDefaultNavigation();
+    }
+
+    /**
+     * referenced from XML view
+     */
+    public void showNavigationMenu(@SuppressWarnings("unused") View view) {
+        showNavigationMenu();
+    }
+
+    private void showNavigationMenu() {
+        NavigationAppFactory.showNavigationMenu(geolocation, this, cache, search);
     }
 
     /**
@@ -1459,8 +1474,15 @@ public class CacheDetailActivity extends AbstractActivity {
             }
 
             // cache hidden
-            if (cache.getHiddenDate() != null && cache.getHiddenDate().getTime() > 0) {
-                addCacheDetail(cache.isEventCache() ? R.string.cache_event : R.string.cache_hidden, cgBase.formatFullDate(cache.getHiddenDate().getTime()));
+            if (cache.getHiddenDate() != null) {
+                long time = cache.getHiddenDate().getTime();
+                if (time > 0) {
+                    String dateString = cgBase.formatFullDate(time);
+                    if (cache.isEventCache()) {
+                        dateString = DateUtils.formatDateTime(cgeoapplication.getInstance().getBaseContext(), time, DateUtils.FORMAT_SHOW_WEEKDAY) + ", " + dateString;
+                    }
+                    addCacheDetail(cache.isEventCache() ? R.string.cache_event : R.string.cache_hidden, dateString);
+                }
             }
 
             // cache location
@@ -1680,7 +1702,7 @@ public class CacheDetailActivity extends AbstractActivity {
 
             @Override
             public void run() {
-                app.removeCacheFromCache(cache.getGeocode());
+                cgeoapplication.removeCacheFromCache(cache.getGeocode());
                 search = cgBase.searchByGeocode(cache.getGeocode(), null, 0, true, handler);
 
                 handler.sendEmptyMessage(0);
@@ -1873,10 +1895,10 @@ public class CacheDetailActivity extends AbstractActivity {
                 final TextView internalsText = (TextView) view.findViewById(R.id.debug_text);
 
                 String sl = "Storage location: ";
-                if (cache.getStorageLocation().contains(StorageLocations.CACHE)) {
+                if (cache.getStorageLocation().contains(StorageLocation.CACHE)) {
                     sl += "Cache ";
                 }
-                if (cache.getStorageLocation().contains(StorageLocations.DATABASE)) {
+                if (cache.getStorageLocation().contains(StorageLocation.DATABASE)) {
                     sl += "Database (" + cache.getListId() + ")";
                 }
 
@@ -2096,11 +2118,20 @@ public class CacheDetailActivity extends AbstractActivity {
 
                 // Fast preview: parse only HTML without loading any images
                 HtmlImageCounter imageCounter = new HtmlImageCounter();
-                description = Html.fromHtml(descriptionString, imageCounter, new UnknownTagsHandler());
+                final UnknownTagsHandler unknownTagsHandler = new UnknownTagsHandler();
+                description = Html.fromHtml(descriptionString, imageCounter, unknownTagsHandler);
                 publishProgress();
                 if (imageCounter.getImageCount() > 0) {
                     // Complete view: parse again with loading images - if necessary ! If there are any images causing problems the user can see at least the preview
-                    description = Html.fromHtml(descriptionString, new HtmlImage(CacheDetailActivity.this, cache.getGeocode(), true, cache.getListId(), false), new UnknownTagsHandler());
+                    description = Html.fromHtml(descriptionString, new HtmlImage(CacheDetailActivity.this, cache.getGeocode(), true, cache.getListId(), false), unknownTagsHandler);
+                    publishProgress();
+                }
+
+                // if description has HTML table, add a note at the end of the long description
+                if (unknownTagsHandler.isTableDetected() && descriptionView == view.findViewById(R.id.longdesc)) {
+                    final int startPos = description.length();
+                    ((Editable) description).append("\n\n" + res.getString(R.string.cache_description_table_note));
+                    ((Editable) description).setSpan(new StyleSpan(Typeface.ITALIC), startPos, description.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     publishProgress();
                 }
                 return null;
@@ -2235,7 +2266,7 @@ public class CacheDetailActivity extends AbstractActivity {
                 // cache logs
                 RelativeLayout rowView;
 
-                if (cache != null && cache.getLogs(allLogs) != null) {
+                if (cache != null) {
                     for (cgLog log : cache.getLogs(allLogs)) {
                         rowView = (RelativeLayout) getLayoutInflater().inflate(R.layout.cacheview_logs_item, null);
 

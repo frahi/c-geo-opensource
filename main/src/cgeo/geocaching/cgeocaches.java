@@ -20,6 +20,7 @@ import cgeo.geocaching.maps.CGeoMap;
 import cgeo.geocaching.sorting.CacheComparator;
 import cgeo.geocaching.sorting.DateComparator;
 import cgeo.geocaching.sorting.DifficultyComparator;
+import cgeo.geocaching.sorting.EventDateComparator;
 import cgeo.geocaching.sorting.FindsComparator;
 import cgeo.geocaching.sorting.GeocodeComparator;
 import cgeo.geocaching.sorting.InventoryComparator;
@@ -31,6 +32,7 @@ import cgeo.geocaching.sorting.StateComparator;
 import cgeo.geocaching.sorting.TerrainComparator;
 import cgeo.geocaching.sorting.VisitComparator;
 import cgeo.geocaching.sorting.VoteComparator;
+import cgeo.geocaching.ui.CacheListAdapter;
 import cgeo.geocaching.utils.RunnableWithArgument;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -75,8 +77,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class cgeocaches extends AbstractListActivity {
 
@@ -210,7 +214,7 @@ public class cgeocaches extends AbstractListActivity {
                     AlertDialog alert = dialog.create();
                     alert.show();
                 } else if (app != null && SearchResult.getError(search) != null) {
-                    showToast(res.getString(R.string.err_download_fail) + SearchResult.getError(search).getErrorString(res) + ".");
+                    showToast(res.getString(R.string.err_download_fail) + " " + SearchResult.getError(search).getErrorString(res) + ".");
 
                     hideLoading();
                     showProgress(false);
@@ -279,7 +283,7 @@ public class cgeocaches extends AbstractListActivity {
                 }
 
                 if (SearchResult.getError(search) != null) {
-                    showToast(res.getString(R.string.err_download_fail) + SearchResult.getError(search).getErrorString(res) + ".");
+                    showToast(res.getString(R.string.err_download_fail) + " " + SearchResult.getError(search).getErrorString(res) + ".");
 
                     listFooter.setOnClickListener(new MoreCachesListener());
                     hideLoading();
@@ -719,7 +723,7 @@ public class cgeocaches extends AbstractListActivity {
         }
 
         // refresh standard list if it has changed (new caches downloaded)
-        if (type == CacheListType.OFFLINE && listId == StoredList.STANDARD_LIST_ID && search != null) {
+        if (type == CacheListType.OFFLINE && listId >= StoredList.STANDARD_LIST_ID && search != null) {
             SearchResult newSearch = cgBase.searchByOffline(coords, cacheType, listId);
             if (newSearch != null && newSearch.totalCnt != search.totalCnt) {
                 refreshCurrentList();
@@ -1069,7 +1073,7 @@ public class cgeocaches extends AbstractListActivity {
                 return true;
         }
 
-        return CacheListAppFactory.onMenuItemSelected(item, geo, cacheList, this, res, search);
+        return CacheListAppFactory.onMenuItemSelected(item, geo, cacheList, this, search);
     }
 
     private void showFilterMenu(final int submenu) {
@@ -1146,7 +1150,7 @@ public class cgeocaches extends AbstractListActivity {
         if (cache.getCoords() != null) {
             menu.add(0, MENU_DEFAULT_NAVIGATION, 0, res.getString(R.string.cache_menu_default_navigation));
             final SubMenu subMenu = menu.addSubMenu(1, 0, 0, res.getString(R.string.cache_menu_navigate)).setIcon(android.R.drawable.ic_menu_mapmode);
-            NavigationAppFactory.addMenuItems(subMenu, this, res);
+            NavigationAppFactory.addMenuItems(subMenu, this);
             addVisitMenu(menu, cache);
             menu.add(0, MENU_CACHE_DETAILS, 0, res.getString(R.string.cache_menu_details));
         }
@@ -1212,7 +1216,7 @@ public class cgeocaches extends AbstractListActivity {
         if (id == MENU_DEFAULT_NAVIGATION) {
             final cgCache cache = getCacheFromAdapter(adapterInfo);
             final SearchResult singleSearch = cgBase.searchByGeocode(cache.getGeocode(), null, 0, false, null);
-            NavigationAppFactory.startDefaultNavigationApplication(geo, this, getResources(), cache, singleSearch, null, null);
+            NavigationAppFactory.startDefaultNavigationApplication(geo, this, cache, singleSearch, null, null);
             return true;
         } else if (id == MENU_LOG_VISIT) {
             return getCacheFromAdapter(adapterInfo).logVisit(this);
@@ -1265,7 +1269,7 @@ public class cgeocaches extends AbstractListActivity {
             final SearchResult singleSearch = cgBase.searchByGeocode(cache.getGeocode(), null, 0, false, null);
 
             if (NavigationAppFactory.onMenuItemSelected(item, geo, this,
-                    res, cache, singleSearch, null, null)) {
+                    cache, singleSearch, null, null)) {
                 return true;
             }
 
@@ -2528,7 +2532,7 @@ public class cgeocaches extends AbstractListActivity {
 
         // apply filter settings (if there's a filter)
         if (adapter != null) {
-            List<String> geocodes = new ArrayList<String>();
+            Set<String> geocodes = new HashSet<String>();
             for (cgCache cache : adapter.getFilteredList()) {
                 geocodes.add(cache.getGeocode());
             }
@@ -2627,12 +2631,12 @@ public class cgeocaches extends AbstractListActivity {
                 }
             }
             if (eventsOnly) {
-                adapter.setComparator(new DateComparator());
+                adapter.setComparator(new EventDateComparator());
             }
             else if (type == CacheListType.HISTORY) {
                 adapter.setComparator(new VisitComparator());
             }
-            else {
+            else if (adapter.getCacheComparator() != null && adapter.getCacheComparator() instanceof EventDateComparator) {
                 adapter.setComparator(null);
             }
         }

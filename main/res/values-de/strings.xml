@@ -176,6 +176,7 @@
   <string name="err_waypoint_add_failed">c:geo konnte den Wegpunkt nicht hinzufügen.</string>
   <string name="err_waypoint_load_failed">c:geo konnte den Wegpunkt nicht laden.</string>
   <string name="err_waypoint_delete_failed">c:geo konnte den Wegpunkt nicht löschen.</string>
+  <string name="err_waypoint_open_cache_failed">c:geo konnte die Cachedetails nicht laden.</string>
   <string name="err_point_unknown_position">c:geo konnte deinen Standort nicht bestimmen.</string>
   <string name="err_point_no_position_given_title">Info benötigt</string>
   <string name="err_point_no_position_given">Mindestens Längen- und Breitengrad oder Entfernung und Richtung angeben. Auch alle Angaben sind möglich.</string>
@@ -377,8 +378,8 @@
   <string name="init_captcha">Zeige CAPTCHA wenn notwendig</string>
   <string name="init_useenglish">c:geo auf Englisch nutzen (Neustart erforderlich)</string>
   <string name="init_exclude">Eigene und gefundene Caches ausblenden</string>
-  <string name="init_showwaypoints">Wegpunkte zeigen</string>
-  <string name="init_showwaypoint_description">Anzahl der Caches in der Karte unterhalb der Wegpunkte angezeigt werden.</string>
+  <string name="init_showwaypoints">Wegpunkte auf Live-Karte zeigen</string>
+  <string name="init_showwaypoint_description">Wenn weniger als die angegebene Anzahl an Caches auf der Karte sichtbar sind, werden zusätzlich deren Wegpunkte angezeigt.</string>
   <string name="init_disabled">Deaktivierte Caches ausblenden</string>
   <string name="init_offline">Statische Karten für Offline-Verwendung speichern</string>
   <string name="init_save_log_img">Logbilder abspeichern</string>
@@ -617,6 +618,7 @@
   <string name="waypoint_done">Fertig</string>
   <string name="waypoint_duplicate">Duplizieren</string>
   <string name="waypoint_copy_of">Kopie von</string>
+  <string name="waypoint_menu_open_cache">Cache öffnen</string>
   <string name="search_history">Verlauf</string>
   <string name="search_history_empty">Keine Ziele bisher</string>
   <string name="search_remove_destination">Ziel gelöscht</string>

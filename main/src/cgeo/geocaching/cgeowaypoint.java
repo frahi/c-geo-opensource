@@ -27,6 +27,7 @@ public class cgeowaypoint extends AbstractActivity {
     private static final int MENU_ID_NAVIGATION = 0;
     private static final int MENU_ID_CACHES_AROUND = 5;
     private static final int MENU_ID_DEFAULT_NAVIGATION = 2;
+    private static final int MENU_ID_OPEN_GEOCACHE = 6;
     private cgWaypoint waypoint = null;
     private String geocode = null;
     private int id = -1;
@@ -214,12 +215,13 @@ public class cgeowaypoint extends AbstractActivity {
         addNavigationMenuItems(subMenu);
 
         menu.add(0, MENU_ID_CACHES_AROUND, 0, res.getString(R.string.cache_menu_around)).setIcon(android.R.drawable.ic_menu_rotate); // caches around
+        menu.add(0, MENU_ID_OPEN_GEOCACHE, 0, res.getString(R.string.waypoint_menu_open_cache)).setIcon(android.R.drawable.ic_menu_mylocation); // open geocache
 
         return true;
     }
 
     private void addNavigationMenuItems(Menu menu) {
-        NavigationAppFactory.addMenuItems(menu, this, res);
+        NavigationAppFactory.addMenuItems(menu, this);
     }
 
     @Override
@@ -231,6 +233,9 @@ public class cgeowaypoint extends AbstractActivity {
             menu.findItem(MENU_ID_NAVIGATION).setVisible(visible);
             menu.findItem(MENU_ID_DEFAULT_NAVIGATION).setVisible(visible);
             menu.findItem(MENU_ID_CACHES_AROUND).setVisible(visible);
+
+            boolean openGeocache = StringUtils.isEmpty(geocode) && StringUtils.isNotEmpty(waypoint.getGeocode());
+            menu.findItem(MENU_ID_OPEN_GEOCACHE).setVisible(openGeocache);
         } catch (Exception e) {
             // nothing
         }
@@ -247,9 +252,12 @@ public class cgeowaypoint extends AbstractActivity {
         } else if (menuItem == MENU_ID_CACHES_AROUND) {
             cachesAround();
             return true;
+        } else if (menuItem == MENU_ID_OPEN_GEOCACHE) {
+            goToGeocache();
+            return true;
         }
 
-        return NavigationAppFactory.onMenuItemSelected(item, geo, this, res, null, null, waypoint, null);
+        return NavigationAppFactory.onMenuItemSelected(item, geo, this, null, null, waypoint, null);
     }
 
     private void cachesAround() {
@@ -258,6 +266,16 @@ public class cgeowaypoint extends AbstractActivity {
         }
 
         cgeocaches.startActivityCachesAround(this, waypoint.getCoords());
+
+        finish();
+    }
+
+    private void goToGeocache() {
+        if (waypoint == null || waypoint.getGeocode() == null) {
+            showToast(res.getString(R.string.err_waypoint_open_cache_failed));
+        }
+
+        CacheDetailActivity.startActivity(this, waypoint.getGeocode());
 
         finish();
     }
@@ -297,7 +315,7 @@ public class cgeowaypoint extends AbstractActivity {
 
         public void onClick(View arg0) {
             if (app.deleteWaypoint(id)) {
-                app.removeCacheFromCache(geocode);
+                cgeoapplication.removeCacheFromCache(geocode);
 
                 finish();
                 return;
@@ -316,7 +334,7 @@ public class cgeowaypoint extends AbstractActivity {
             return;
         }
 
-        NavigationAppFactory.startDefaultNavigationApplication(geo, this, getResources(), null, null, waypoint, null);
+        NavigationAppFactory.startDefaultNavigationApplication(geo, this, null, null, waypoint, null);
     }
 
     private boolean navigationPossible() {

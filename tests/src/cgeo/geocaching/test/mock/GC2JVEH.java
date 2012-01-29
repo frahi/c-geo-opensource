@@ -148,4 +148,5 @@ public class GC2JVEH extends MockedCache {
         spoilers.add(mockedImage);
         return spoilers;
     }
+
 }

@@ -1,6 +1,6 @@
 package cgeo.geocaching;
 
-import cgeo.geocaching.cgData.StorageLocations;
+import cgeo.geocaching.cgData.StorageLocation;
 import cgeo.geocaching.activity.IAbstractActivity;
 import cgeo.geocaching.connector.ConnectorFactory;
 import cgeo.geocaching.connector.GCConnector;
@@ -56,7 +56,7 @@ public class cgCache implements ICache {
     private String ownerReal = "";
     private Date hidden = null;
     private String hint = "";
-    private CacheSize size = null;
+    private CacheSize size = CacheSize.UNKNOWN;
     private float difficulty = 0;
     private float terrain = 0;
     private Float direction = null;
@@ -88,12 +88,13 @@ public class cgCache implements ICache {
     private List<cgTrackable> inventory = null;
     private Map<LogType, Integer> logCounts = new HashMap<LogType, Integer>();
     private boolean logOffline = false;
+    private boolean userModifiedCoords = false;
     // temporary values
     private boolean statusChecked = false;
     private boolean statusCheckedView = false;
     private String directionImg = "";
     private String nameForSorting;
-    private final EnumSet<StorageLocations> storageLocation = EnumSet.of(StorageLocations.HEAP);
+    private final EnumSet<StorageLocation> storageLocation = EnumSet.of(StorageLocation.HEAP);
 
     private static final Pattern NUMBER_PATTERN = Pattern.compile("\\d+");
 
@@ -102,18 +103,35 @@ public class cgCache implements ICache {
      *
      * @param other
      *            the other version, or null if non-existent
+     * @return true if this cache is "equal" to the other version
      */
-    public void gatherMissingFrom(final cgCache other) {
+    public boolean gatherMissingFrom(final cgCache other) {
         if (other == null) {
-            return;
+            return false;
         }
 
         updated = System.currentTimeMillis();
         if (!detailed && other.detailed) {
             detailed = true;
             detailedUpdate = other.detailedUpdate;
+            coords = other.coords;
+            premiumMembersOnly = other.premiumMembersOnly;
+            reliableLatLon = other.reliableLatLon;
+            archived = other.archived;
+            favorite = other.favorite;
+            onWatchlist = other.onWatchlist;
+            logOffline = other.logOffline;
         }
 
+        /*
+         * No gathering for boolean members
+         * - found
+         * - own
+         * - disabled
+         * - favorite
+         * - onWatchlist
+         * - logOffline
+         */
         if (visitedDate == 0) {
             visitedDate = other.getVisitedDate();
         }
@@ -150,7 +168,7 @@ public class cgCache implements ICache {
         if (StringUtils.isBlank(hint)) {
             hint = other.hint;
         }
-        if (size == null) {
+        if (size == null || CacheSize.UNKNOWN == size) {
             size = other.size;
         }
         if (difficulty == 0) {
@@ -221,6 +239,81 @@ public class cgCache implements ICache {
         if (CollectionUtils.isEmpty(logs)) { // keep last known logs if none
             logs = other.logs;
         }
+        if (logCounts.size() == 0) {
+            logCounts = other.logCounts;
+        }
+        if (userModifiedCoords == false) {
+            userModifiedCoords = other.userModifiedCoords;
+        }
+        if (reliableLatLon == false) {
+            reliableLatLon = other.reliableLatLon;
+        }
+
+        return isEqualTo(other);
+    }
+
+    /**
+     * Compare two caches quickly. For map and list fields only the references are compared !
+     *
+     * @param other
+     * @return true if both caches have the same content
+     */
+    public boolean isEqualTo(cgCache other) {
+        if (other == null) {
+            return false;
+        }
+
+        if (
+        // updated
+        // detailedUpdate
+        // visitedDate
+        detailed == other.detailed &&
+                geocode.equalsIgnoreCase(other.geocode) &&
+                name.equalsIgnoreCase(other.name) &&
+                cacheType == other.cacheType &&
+                size == other.size &&
+                found == other.found &&
+                own == other.own &&
+                premiumMembersOnly == other.premiumMembersOnly &&
+                difficulty == other.difficulty &&
+                terrain == other.terrain &&
+                (coords != null ? coords.isEqualTo(other.coords) : coords == other.coords) &&
+                reliableLatLon == other.reliableLatLon &&
+                disabled == other.disabled &&
+                archived == other.archived &&
+                listId == other.listId &&
+                owner.equalsIgnoreCase(other.owner) &&
+                ownerReal.equalsIgnoreCase(other.ownerReal) &&
+                (description != null ? description.equalsIgnoreCase(other.description) : description == other.description) &&
+                (personalNote != null ? personalNote.equalsIgnoreCase(other.personalNote) : personalNote == other.personalNote) &&
+                shortdesc.equalsIgnoreCase(other.shortdesc) &&
+                latlon.equalsIgnoreCase(other.latlon) &&
+                location.equalsIgnoreCase(other.location) &&
+                favorite == other.favorite &&
+                favoritePoints == other.favoritePoints &&
+                onWatchlist == other.onWatchlist &&
+                (hidden != null ? hidden.compareTo(other.hidden) == 0 : hidden == other.hidden) &&
+                guid.equalsIgnoreCase(other.guid) &&
+                hint.equalsIgnoreCase(other.hint) &&
+                cacheId.equalsIgnoreCase(other.cacheId) &&
+                direction == other.direction &&
+                distance == other.distance &&
+                elevation == other.elevation &&
+                nameSp == other.nameSp &&
+                rating == other.rating &&
+                votes == other.votes &&
+                myVote == other.myVote &&
+                inventoryItems == other.inventoryItems &&
+                attributes == other.attributes &&
+                waypoints == other.waypoints &&
+                spoilers == other.spoilers &&
+                logs == other.logs &&
+                inventory == other.inventory &&
+                logCounts == other.logCounts &&
+                logOffline == other.logOffline) {
+            return true;
+        }
+        return false;
     }
 
     public boolean hasTrackables() {
@@ -805,9 +898,12 @@ public class cgCache implements ICache {
     /**
      * @param allLogs
      *            true for all logs, false for friend logs only
-     * @return the logs with all entries or just the entries of the friends
+     * @return the logs with all entries or just the entries of the friends, never <code>null</code>
      */
     public List<cgLog> getLogs(boolean allLogs) {
+        if (logs == null) {
+            return Collections.emptyList();
+        }
         if (allLogs) {
             return logs;
         }
@@ -970,7 +1066,7 @@ public class cgCache implements ICache {
     /**
      * @return the storageLocation
      */
-    public EnumSet<StorageLocations> getStorageLocation() {
+    public EnumSet<StorageLocation> getStorageLocation() {
         return storageLocation;
     }
 
@@ -978,7 +1074,7 @@ public class cgCache implements ICache {
      * @param storageLocation
      *            the storageLocation to set
      */
-    public void addStorageLocation(StorageLocations sl) {
+    public void addStorageLocation(StorageLocation sl) {
         this.storageLocation.add(sl);
     }
 
@@ -992,6 +1088,14 @@ public class cgCache implements ICache {
 
     public boolean hasWaypoints() {
         return CollectionUtils.isNotEmpty(waypoints);
+    }
+
+    public boolean hasUserModifiedCoords() {
+        return userModifiedCoords;
+    }
+
+    public void setUserModifiedCoords(boolean coordsChanged) {
+        this.userModifiedCoords = coordsChanged;
     }
 
     /**
@@ -1033,7 +1137,7 @@ public class cgCache implements ICache {
         if (waypoint.isUserDefined()) {
             waypoints.remove(index);
             cgeoapplication.getInstance().deleteWaypoint(waypoint.getId());
-            cgeoapplication.getInstance().removeCacheFromCache(geocode);
+            cgeoapplication.removeCacheFromCache(geocode);
             return true;
         }
         return false;
@@ -1128,5 +1232,30 @@ public class cgCache implements ICache {
         }
 
         offlineNotes.add(newNote);
+    }
+
+    public void prependLog(final cgLog log) {
+        if (logs == null) {
+            logs = new ArrayList<cgLog>();
+        }
+        logs.add(0, log);
+    }
+
+    public void appendLog(final cgLog log) {
+        if (logs == null) {
+            logs = new ArrayList<cgLog>();
+        }
+        logs.add(log);
+    }
+
+    /*
+     * For working in the debugger
+     * (non-Javadoc)
+     *
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return this.geocode + " " + this.name;
     }
 }

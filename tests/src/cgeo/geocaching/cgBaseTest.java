@@ -50,7 +50,7 @@ public class cgBaseTest extends AndroidTestCase {
         Assert.assertEquals(expected.getPersonalNote(), actual.getPersonalNote());
         Assert.assertEquals(expected.isFound(), actual.isFound());
         Assert.assertEquals(expected.isFavorite(), actual.isFavorite());
-        Assert.assertEquals(expected.getFavoritePoints(), actual.getFavoritePoints());
+        Assert.assertTrue(expected.getFavoritePoints() <= actual.getFavoritePoints());
         Assert.assertEquals(expected.isWatchlist(), actual.isWatchlist());
         Date date1 = expected.getHiddenDate();
         Date date2 = actual.getHiddenDate();
@@ -90,7 +90,12 @@ public class cgBaseTest extends AndroidTestCase {
 
     public static void testHumanDistance() {
         assertEquals("?", cgBase.getHumanDistance(null));
-        assertEquals("123 km", cgBase.getHumanDistance(123.456f));
+        if (Settings.isUseMetricUnits()) {
+            assertEquals("123 km", cgBase.getHumanDistance(123.456f));
+        }
+        else {
+            assertEquals("77 mi", cgBase.getHumanDistance(123.456f));
+        }
     }
 
     public static void testWaypointsFromNote() {
